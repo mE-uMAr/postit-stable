@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthIconSprite } from "@/components/auth/AuthIconSprite";
 import { AuthForm } from "@/components/auth/AuthForm";
@@ -70,7 +71,9 @@ export default function SignupPage() {
 
         {/* Form */}
         <section className="auth-form-wrap">
-          <AuthForm mode="signup" />
+          <Suspense fallback={null}>
+            <AuthForm mode="signup" />
+          </Suspense>
         </section>
       </main>
     </>

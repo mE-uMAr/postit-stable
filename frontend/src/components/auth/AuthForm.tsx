@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 type Mode = "login" | "signup";
@@ -25,6 +25,7 @@ function scorePassword(v: string): number {
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isSignup = mode === "signup";
 
   const [values, setValues] = useState({ name: "", email: "", password: "" });
@@ -35,6 +36,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const strength = scorePassword(values.password);
   const strengthLabel =
@@ -51,8 +53,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setInvalid((iv) => ({ ...iv, email: values.email !== "" && !isEmail(values.email) }));
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     const checks: Array<[FieldId, boolean]> = isSignup
       ? [
           ["name", values.name.trim().length > 1],
@@ -74,7 +77,37 @@ export function AuthForm({ mode }: { mode: Mode }) {
     if (!ok) return;
 
     setLoading(true);
-    setTimeout(() => router.push("/app/compose"), 900);
+    try {
+      const endpoint = isSignup ? "/api/auth/register" : "/api/auth/login";
+      const payload = isSignup
+        ? {
+            full_name: values.name.trim(),
+            email: values.email.trim(),
+            password: values.password,
+            workspace_name: `${values.name.trim().split(" ")[0]}'s Workspace`,
+          }
+        : { email: values.email.trim(), password: values.password };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error?.message || "Something went wrong. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const next = searchParams.get("next") || "/app/compose";
+      router.push(next);
+      router.refresh();
+    } catch {
+      setError("Couldn't reach the server. Is the API running?");
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,15 +117,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
         {isSignup ? "Connect your platforms after — takes a minute." : "Pick up where you left off."}
       </p>
 
-      <div className="error-banner" id="errorBanner">
+      <div className={"error-banner" + (error ? " show" : "")} id="errorBanner">
         <svg width="18" height="18">
           <use href="#i-alert" />
         </svg>{" "}
-        <span>
-          {isSignup
-            ? "Something went wrong. Please try again."
-            : "That email or password didn't match. Try again."}
-        </span>
+        <span>{error}</span>
       </div>
 
       <div className="social-btns">

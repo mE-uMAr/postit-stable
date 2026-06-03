@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { AuthIconSprite } from "@/components/auth/AuthIconSprite";
 import { AuthForm } from "@/components/auth/AuthForm";
@@ -65,7 +66,9 @@ export default function LoginPage() {
         </aside>
 
         <section className="auth-form-wrap">
-          <AuthForm mode="login" />
+          <Suspense fallback={null}>
+            <AuthForm mode="login" />
+          </Suspense>
         </section>
       </main>
     </>

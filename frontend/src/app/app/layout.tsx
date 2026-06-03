@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/app/providers/ThemeProvider";
 import { ToastProvider } from "@/components/app/providers/ToastProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
 
 import "@/styles/app.css";
@@ -18,10 +19,12 @@ const themeScript = `(function(){try{var t=localStorage.getItem('postit-theme')|
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
-      <ToastProvider>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <AppShell>{children}</AppShell>
-      </ToastProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+          <AppShell>{children}</AppShell>
+        </ToastProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

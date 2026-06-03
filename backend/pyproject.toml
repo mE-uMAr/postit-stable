@@ -1,0 +1,19 @@
+[project]
+name = "postit-backend"
+version = "1.0.0"
+description = "Postit — async FastAPI backend (auth, posts, billing, analytics, admin)."
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
+ignore = ["B008"]  # FastAPI Depends() in defaults is idiomatic
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
