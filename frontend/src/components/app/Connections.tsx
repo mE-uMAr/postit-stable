@@ -1,34 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { PlatformLogo } from "@/components/PlatformLogo";
-import { PF } from "@/lib/platforms";
-import type { PlatformKey } from "@/lib/types";
+import { api } from "@/lib/api/client";
+import { errorMessage, useApi } from "@/lib/api/useApi";
+import type { ApiConnection, ApiPlatform, ConnectionStatus, PlatformKey } from "@/lib/api/types";
 import { useToast } from "./providers/ToastProvider";
 
-type ConnStatus = "connected" | "expired" | "disconnected";
-
-interface Conn {
-  key: PlatformKey;
-  status: ConnStatus;
-  handle: string | null;
-  av: string | null;
-}
-
-const CONNS: Conn[] = [
-  { key: "x", status: "connected", handle: "@maplehome", av: "M" },
-  { key: "linkedin", status: "connected", handle: "Maple & Co", av: "M" },
-  { key: "instagram", status: "connected", handle: "maple.home", av: "m" },
-  { key: "threads", status: "connected", handle: "maple.home", av: "m" },
-  { key: "facebook", status: "connected", handle: "Maple & Co Home", av: "M" },
-  { key: "youtube", status: "expired", handle: "Maple & Co", av: "M" },
-  { key: "tiktok", status: "disconnected", handle: null, av: null },
-  { key: "wordpress", status: "connected", handle: "maple.blog", av: "W" },
-  { key: "blogger", status: "disconnected", handle: null, av: null },
-];
-
-function StatusBadge({ status }: { status: ConnStatus }) {
+function StatusBadge({ status }: { status: ConnectionStatus }) {
   if (status === "connected")
     return (
       <span className="badge badge-success">
@@ -50,24 +30,36 @@ function StatusBadge({ status }: { status: ConnStatus }) {
 
 export function Connections() {
   const pushToast = useToast();
-  const [conns, setConns] = useState<Conn[]>(CONNS);
+  const platforms = useApi<ApiPlatform[]>("platforms");
+  const connections = useApi<ApiConnection[]>("connections");
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const act = (key: PlatformKey, to: ConnStatus) => {
-    setConns((cs) =>
-      cs.map((c) =>
-        c.key === key
-          ? { ...c, status: to, handle: to === "disconnected" ? null : c.handle || PF[key].author }
-          : c,
-      ),
-    );
-    pushToast(
-      to === "connected"
-        ? `${PF[key].name} connected`
-        : to === "disconnected"
-          ? `${PF[key].name} disconnected`
-          : `${PF[key].name} reconnected`,
-    );
+  const byPlatform = useMemo(() => {
+    const map = new Map<string, ApiConnection>();
+    (connections.data ?? []).forEach((c) => map.set(c.platform_id, c));
+    return map;
+  }, [connections.data]);
+
+  const connectedCount = (connections.data ?? []).filter((c) => c.status === "connected").length;
+  const totalCount = (platforms.data ?? []).length;
+
+  const act = async (platformId: string, action: "connect" | "disconnect" | "reconnect", name: string) => {
+    setBusy(platformId + action);
+    try {
+      await api.post(`connections/${platformId}/${action}`, {});
+      await connections.reload();
+      pushToast(
+        action === "disconnect" ? `${name} disconnected` : `${name} ${action === "reconnect" ? "reconnected" : "connected"}`,
+      );
+    } catch (e) {
+      pushToast(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
   };
+
+  const loading = platforms.loading || connections.loading;
+  const error = platforms.error || connections.error;
 
   return (
     <div className="view-pad">
@@ -79,83 +71,92 @@ export function Connections() {
             posts where.
           </p>
         </div>
-        <div className="vh-actions">
-          <button className="btn btn-secondary">
-            <Icon name="plus" size={17} /> Connect account
-          </button>
-        </div>
       </div>
 
-      <div className="conn-banner">
-        <span className="ic">
-          <Icon name="shield" size={20} />
-        </span>
-        <span>
-          <strong>7 of 9 platforms connected.</strong> Reconnect YouTube to keep video posts flowing — its
-          access token expired.
-        </span>
-      </div>
+      {loading && <div className="post-sub">Loading connections…</div>}
+      {error && <div className="conn-banner" style={{ background: "var(--danger-tint)" }}>{error}</div>}
 
-      <div className="conn-grid">
-        {conns.map((c) => {
-          const p = PF[c.key];
-          return (
-            <div key={c.key} className="conn-card">
-              <div className="conn-top">
-                <span className={"pf " + p.cls}>
-                  <PlatformLogo platform={p.key} />
-                </span>
-                <div>
-                  <div className="conn-name">{p.name}</div>
-                  <StatusBadge status={c.status} />
+      {!loading && !error && (
+        <>
+          <div className="conn-banner">
+            <span className="ic">
+              <Icon name="shield" size={20} />
+            </span>
+            <span>
+              <strong>
+                {connectedCount} of {totalCount} platforms connected.
+              </strong>{" "}
+              Reconnect any expired accounts to keep posts flowing.
+            </span>
+          </div>
+
+          <div className="conn-grid">
+            {(platforms.data ?? []).map((p) => {
+              const conn = byPlatform.get(p.id);
+              const status: ConnectionStatus = conn?.status ?? "disconnected";
+              return (
+                <div key={p.id} className="conn-card">
+                  <div className="conn-top">
+                    <span className={"pf pf-" + p.id}>
+                      <PlatformLogo platform={p.id as PlatformKey} />
+                    </span>
+                    <div>
+                      <div className="conn-name">{p.name}</div>
+                      <StatusBadge status={status} />
+                    </div>
+                  </div>
+                  {conn?.handle ? (
+                    <div className="conn-acct">
+                      <span className="av">{conn.avatar_text ?? p.name[0]}</span>
+                      <span className="handle">{conn.handle}</span>
+                    </div>
+                  ) : (
+                    <div className="conn-acct">
+                      <span className="handle ink-faint">No account linked yet.</span>
+                    </div>
+                  )}
+                  <div className="conn-foot">
+                    {status === "connected" && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: "var(--ink-faint)" }}
+                        disabled={busy !== null}
+                        onClick={() => act(p.id, "disconnect", p.name)}
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                    {status === "expired" && (
+                      <>
+                        <span className="post-sub">Token expired</span>
+                        <button
+                          className="btn btn-spark btn-sm"
+                          disabled={busy !== null}
+                          onClick={() => act(p.id, "reconnect", p.name)}
+                        >
+                          <Icon name="refresh" size={15} /> Reconnect
+                        </button>
+                      </>
+                    )}
+                    {(status === "disconnected" || status === "revoked") && (
+                      <>
+                        <span className="spacer" />
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled={busy !== null}
+                          onClick={() => act(p.id, "connect", p.name)}
+                        >
+                          Connect
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              {c.handle ? (
-                <div className="conn-acct">
-                  <span className="av">{c.av}</span>
-                  <span className="handle">{c.handle}</span>
-                </div>
-              ) : (
-                <div className="conn-acct">
-                  <span className="handle ink-faint">No account linked yet.</span>
-                </div>
-              )}
-              <div className="conn-foot">
-                {c.status === "connected" && (
-                  <>
-                    <button className="btn btn-ghost btn-sm" onClick={() => act(c.key, "connected")}>
-                      + Add account
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ color: "var(--ink-faint)" }}
-                      onClick={() => act(c.key, "disconnected")}
-                    >
-                      Disconnect
-                    </button>
-                  </>
-                )}
-                {c.status === "expired" && (
-                  <>
-                    <span className="post-sub">Token expired 2d ago</span>
-                    <button className="btn btn-spark btn-sm" onClick={() => act(c.key, "connected")}>
-                      <Icon name="refresh" size={15} /> Reconnect
-                    </button>
-                  </>
-                )}
-                {c.status === "disconnected" && (
-                  <>
-                    <span className="spacer" />
-                    <button className="btn btn-secondary btn-sm" onClick={() => act(c.key, "connected")}>
-                      Connect
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

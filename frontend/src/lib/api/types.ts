@@ -1,5 +1,16 @@
 /* TypeScript shapes mirroring the backend Pydantic read schemas. */
 
+export type PlatformKey =
+  | "x"
+  | "linkedin"
+  | "instagram"
+  | "threads"
+  | "facebook"
+  | "tiktok"
+  | "youtube"
+  | "wordpress"
+  | "blogger";
+
 export interface ApiUser {
   id: string;
   email: string;

@@ -1,19 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Sparkle } from "@/components/Sparkle";
 import { PlatformLogo } from "@/components/PlatformLogo";
-import { eligibility, PF, PLATFORMS } from "@/lib/platforms";
-import { rewriteFor } from "@/lib/rewrite";
-import { prefersReducedMotion } from "@/lib/motion";
-import type { Platform, PlatformKey } from "@/lib/types";
+import { api } from "@/lib/api/client";
+import { errorMessage, useApi } from "@/lib/api/useApi";
+import type { ApiConnection, ApiPlatform, ApiPost, ApiTarget, PlatformKey } from "@/lib/api/types";
 import { useToast } from "./providers/ToastProvider";
 import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
 
 const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
-const STARTER =
-  "Launching our spring collection — lighter materials and a brighter palette, available today.";
 
 interface MediaItem {
   type: "image" | "video";
@@ -21,36 +18,52 @@ interface MediaItem {
 }
 
 interface Variant {
-  text: string;
+  content: string;
   edited: boolean;
-  hasMedia: boolean;
 }
-
 type Variants = Record<string, Variant>;
 
-interface NativePreviewCardProps {
-  p: Platform;
+interface Eligibility {
+  ok: boolean;
+  reason?: string;
+  warn?: string;
+}
+
+function eligibility(
+  p: ApiPlatform,
+  { hasMedia, hasVideo, charCount }: { hasMedia: boolean; hasVideo: boolean; charCount: number },
+): Eligibility {
+  if (p.requires_video && !hasVideo) return { ok: false, reason: "Needs a video — disabled for this post." };
+  if (p.requires_media && !hasMedia) return { ok: false, reason: `${p.name} requires an image or video.` };
+  if (p.char_limit && charCount > p.char_limit) return { ok: true, warn: `Over ${p.char_limit} characters — Postit will trim.` };
+  return { ok: true };
+}
+
+interface PreviewCardProps {
+  platform: ApiPlatform;
+  author: string;
+  handle: string;
   variant: Variant;
   idx: number;
-  onEdit: (key: PlatformKey, text: string) => void;
-  onRegen: (key: PlatformKey) => void;
+  onEdit: (platformId: string, text: string) => void;
+  onRegen: (platformId: string) => void;
   shimmering: boolean;
 }
 
-function NativePreviewCard({ p, variant, idx, onEdit, onRegen, shimmering }: NativePreviewCardProps) {
+function NativePreviewCard({ platform, author, handle, variant, idx, onEdit, onRegen, shimmering }: PreviewCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div className={"npc in" + (shimmering ? " shimmering" : "")} style={{ animationDelay: idx * 60 + "ms" }}>
       <div className="npc-top">
-        <div className="npc-av" style={{ background: `var(--${p.cls})` }}>
-          <PlatformLogo platform={p.key} />
+        <div className="npc-av" style={{ background: `var(--pf-${platform.id})` }}>
+          <PlatformLogo platform={platform.id as PlatformKey} />
         </div>
         <div className="npc-id">
-          <div className="nm">{p.author}</div>
-          <div className="hd">{p.handle}</div>
+          <div className="nm">{author}</div>
+          <div className="hd">{handle}</div>
         </div>
-        <span className={"pf " + p.cls + " npc-pfbadge"} style={{ width: 24, height: 24, borderRadius: 7, fontSize: 11 }}>
-          <PlatformLogo platform={p.key} />
+        <span className={"pf pf-" + platform.id + " npc-pfbadge"} style={{ width: 24, height: 24, borderRadius: 7, fontSize: 11 }}>
+          <PlatformLogo platform={platform.id as PlatformKey} />
         </span>
       </div>
       <div
@@ -58,42 +71,30 @@ function NativePreviewCard({ p, variant, idx, onEdit, onRegen, shimmering }: Nat
         contentEditable
         suppressContentEditableWarning
         ref={ref}
-        onInput={() => {
-          if (ref.current) onEdit(p.key, ref.current.innerText);
+        onBlur={() => {
+          if (ref.current && ref.current.innerText !== variant.content) onEdit(platform.id, ref.current.innerText);
         }}
       >
-        {variant.text}
+        {variant.content}
       </div>
-      {(p.needsMedia || p.needsVideo || variant.hasMedia) && (
+      {(platform.requires_media || platform.requires_video) && (
         <div className="npc-media placeholder" style={{ borderRadius: 0 }}>
-          {p.needsVideo ? "video frame" : "image"}
+          {platform.requires_video ? "video frame" : "image"}
         </div>
       )}
       <div className="npc-actions">
-        <span className="a">
-          <Icon name="heart" size={16} /> 248
-        </span>
-        <span className="a">
-          <Icon name="comment" size={16} /> 19
-        </span>
-        <span className="a">
-          <Icon name="repost" size={16} /> 32
-        </span>
-        <span className="a" style={{ marginLeft: "auto" }}>
-          <Icon name="send" size={16} />
-        </span>
+        <span className="a"><Icon name="heart" size={16} /> 248</span>
+        <span className="a"><Icon name="comment" size={16} /> 19</span>
+        <span className="a"><Icon name="repost" size={16} /> 32</span>
+        <span className="a" style={{ marginLeft: "auto" }}><Icon name="send" size={16} /></span>
       </div>
       <div className="npc-foot">
         {variant.edited ? (
-          <span className="edited">
-            <Icon name="edit" size={13} /> Edited
-          </span>
+          <span className="edited"><Icon name="edit" size={13} /> Edited</span>
         ) : (
-          <span className="edited" style={{ color: "var(--ai)" }}>
-            <Sparkle size={13} /> AI generated
-          </span>
+          <span className="edited" style={{ color: "var(--ai)" }}><Sparkle size={13} /> AI generated</span>
         )}
-        <button className="regen" onClick={() => onRegen(p.key)}>
+        <button className="regen" onClick={() => onRegen(platform.id)}>
           <Icon name="refresh" size={14} /> Regenerate
         </button>
       </div>
@@ -103,82 +104,149 @@ function NativePreviewCard({ p, variant, idx, onEdit, onRegen, shimmering }: Nat
 
 export function Compose() {
   const pushToast = useToast();
+  const platformsApi = useApi<ApiPlatform[]>("platforms");
+  const connectionsApi = useApi<ApiConnection[]>("connections");
 
-  const [text, setText] = useState(STARTER);
+  const platforms = useMemo(() => platformsApi.data ?? [], [platformsApi.data]);
+  const connByPlatform = useMemo(() => {
+    const m = new Map<string, ApiConnection>();
+    (connectionsApi.data ?? []).forEach((c) => m.set(c.platform_id, c));
+    return m;
+  }, [connectionsApi.data]);
+
+  const [text, setText] = useState("");
   const [tone, setTone] = useState("Match my brand");
   const [media, setMedia] = useState<MediaItem[]>([]);
-  const [selected, setSelected] = useState<Set<PlatformKey>>(
-    () => new Set<PlatformKey>(["x", "linkedin", "threads", "facebook"]),
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(["x", "linkedin", "threads", "facebook"]),
   );
+  const [postId, setPostId] = useState<string | null>(null);
   const [variants, setVariants] = useState<Variants | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [shimmerKey, setShimmerKey] = useState<PlatformKey | null>(null);
+  const [shimmerKey, setShimmerKey] = useState<string | null>(null);
   const [modal, setModal] = useState<ConfirmMode | null>(null);
 
   const hasMedia = media.length > 0;
   const hasVideo = media.some((m) => m.type === "video");
   const charCount = text.length;
 
-  const elig = (key: PlatformKey) => eligibility(PF[key], { hasMedia, hasVideo, charCount });
+  const platformById = useMemo(() => {
+    const m = new Map<string, ApiPlatform>();
+    platforms.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [platforms]);
 
-  const toggle = (key: PlatformKey) => {
-    if (!elig(key).ok) return;
+  const elig = (id: string): Eligibility => {
+    const p = platformById.get(id);
+    if (!p) return { ok: false };
+    return eligibility(p, { hasMedia, hasVideo, charCount });
+  };
+
+  const toggle = (id: string) => {
+    if (!elig(id).ok) return;
     setSelected((s) => {
       const n = new Set(s);
-      if (n.has(key)) n.delete(key);
-      else n.add(key);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   };
-  const selectAllEligible = () => {
-    setSelected(new Set(PLATFORMS.filter((p) => elig(p.key).ok).map((p) => p.key)));
-  };
+  const selectAllEligible = () => setSelected(new Set(platforms.filter((p) => elig(p.id).ok).map((p) => p.id)));
 
-  const addMedia = (type: MediaItem["type"]) =>
-    setMedia((m) => [...m, { type, id: Date.now() + Math.random() }]);
+  const addMedia = (type: MediaItem["type"]) => setMedia((m) => [...m, { type, id: Date.now() + Math.random() }]);
   const removeMedia = (id: number) => setMedia((m) => m.filter((x) => x.id !== id));
 
   const eligibleSelected = [...selected].filter((k) => elig(k).ok);
 
-  const generate = () => {
+  const authorFor = (id: string) => connByPlatform.get(id)?.display_name ?? platformById.get(id)?.name ?? id;
+  const handleFor = (id: string) => connByPlatform.get(id)?.handle ?? "Preview";
+
+  const ensurePost = async (): Promise<string> => {
+    const payload = { body: text, tone, media: media.map((m) => ({ type: m.type })) };
+    if (postId) {
+      await api.patch(`posts/${postId}`, payload);
+      return postId;
+    }
+    const created = await api.post<ApiPost>("posts", payload);
+    setPostId(created.id);
+    return created.id;
+  };
+
+  const generate = async () => {
     if (!text.trim() || eligibleSelected.length === 0) return;
     setGenerating(true);
-    setVariants(null);
-    const delay = prefersReducedMotion() ? 0 : 1300;
-    setTimeout(() => {
+    try {
+      const id = await ensurePost();
+      const updated = await api.post<ApiPost>(`posts/${id}/generate`, { platforms: eligibleSelected });
       const v: Variants = {};
-      eligibleSelected.forEach((k) => {
-        v[k] = { text: rewriteFor(k, text, tone), edited: false, hasMedia };
+      updated.targets.forEach((t: ApiTarget) => {
+        v[t.platform_id] = { content: t.content, edited: t.edited };
       });
       setVariants(v);
+    } catch (e) {
+      pushToast(errorMessage(e));
+    } finally {
       setGenerating(false);
-    }, delay);
+    }
   };
 
-  const onEdit = (key: PlatformKey, newText: string) => {
-    setVariants((v) => (v ? { ...v, [key]: { ...v[key], text: newText, edited: true } } : v));
-  };
-  const onRegen = (key: PlatformKey) => {
-    setShimmerKey(key);
-    setTimeout(
-      () => {
-        setVariants((v) => (v ? { ...v, [key]: { ...v[key], text: rewriteFor(key, text, tone), edited: false } } : v));
-        setShimmerKey(null);
-      },
-      prefersReducedMotion() ? 0 : 900,
-    );
+  const onEdit = async (platformId: string, content: string) => {
+    setVariants((v) => (v ? { ...v, [platformId]: { content, edited: true } } : v));
+    if (!postId) return;
+    try {
+      await api.put(`posts/${postId}/targets/${platformId}`, { content });
+    } catch (e) {
+      pushToast(errorMessage(e));
+    }
   };
 
-  // keep variants in sync when platforms get deselected
-  const shownKeys: PlatformKey[] = variants
-    ? (Object.keys(variants) as PlatformKey[]).filter((k) => selected.has(k) && elig(k).ok)
-    : [];
+  const onRegen = async (platformId: string) => {
+    if (!postId) return;
+    setShimmerKey(platformId);
+    try {
+      const t = await api.post<ApiTarget>(`posts/${postId}/targets/${platformId}/regenerate`);
+      setVariants((v) => (v ? { ...v, [platformId]: { content: t.content, edited: t.edited } } : v));
+    } catch (e) {
+      pushToast(errorMessage(e));
+    } finally {
+      setShimmerKey(null);
+    }
+  };
 
-  const xLimit = PF.x.limit ?? 280;
+  const saveDraft = async () => {
+    try {
+      await ensurePost();
+      pushToast("Draft saved");
+    } catch (e) {
+      pushToast(errorMessage(e));
+    }
+  };
+
+  const confirmAction = async () => {
+    const wasSchedule = modal === "schedule";
+    setModal(null);
+    if (!postId) return;
+    try {
+      if (wasSchedule) {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        d.setHours(9, 0, 0, 0);
+        await api.post(`posts/${postId}/schedule`, { scheduled_at: d.toISOString() });
+        pushToast(`Scheduled to ${postCount} platforms for 9:00 AM`);
+      } else {
+        await api.post(`posts/${postId}/publish`);
+        pushToast(`Posted to ${postCount} platforms`);
+      }
+    } catch (e) {
+      pushToast(errorMessage(e));
+    }
+  };
+
+  const shownKeys = variants ? Object.keys(variants).filter((k) => selected.has(k) && elig(k).ok) : [];
+  const xLimit = platformById.get("x")?.char_limit ?? 280;
   const overX = selected.has("x") && charCount > xLimit;
-
-  const summaryScheduled = 0;
   const postCount = eligibleSelected.length;
+  const canPublish = Boolean(variants && shownKeys.length > 0);
 
   return (
     <div className="compose-grid">
@@ -186,15 +254,9 @@ export function Compose() {
       <div className="compose-left">
         <div className="composer-card">
           <div className="composer-toolbar">
-            <button className="tool-btn" title="Bold">
-              <Icon name="bold" size={18} />
-            </button>
-            <button className="tool-btn" title="Italic">
-              <Icon name="italic" size={18} />
-            </button>
-            <button className="tool-btn" title="Link">
-              <Icon name="link" size={18} />
-            </button>
+            <button className="tool-btn" title="Bold"><Icon name="bold" size={18} /></button>
+            <button className="tool-btn" title="Italic"><Icon name="italic" size={18} /></button>
+            <button className="tool-btn" title="Link"><Icon name="link" size={18} /></button>
             <span className="spacer" />
             <span className={"char-meter" + (overX ? " warn" : "")}>
               {selected.has("x") ? `${charCount} / ${xLimit} · X` : `${charCount} chars`}
@@ -211,9 +273,7 @@ export function Compose() {
               {media.map((m) => (
                 <div key={m.id} className="media-thumb placeholder" style={{ fontSize: 10 }}>
                   {m.type === "video" ? "video" : "image"}
-                  <button className="rm" onClick={() => removeMedia(m.id)}>
-                    <Icon name="x" size={12} />
-                  </button>
+                  <button className="rm" onClick={() => removeMedia(m.id)}><Icon name="x" size={12} /></button>
                 </div>
               ))}
             </div>
@@ -249,42 +309,30 @@ export function Compose() {
           disabled={generating || !text.trim() || eligibleSelected.length === 0}
         >
           {generating ? (
-            <>
-              <span className="spin" /> Generating…
-            </>
+            <><span className="spin" /> Generating…</>
           ) : (
-            <>
-              <Sparkle size={17} /> Generate platform versions
-            </>
+            <><Sparkle size={17} /> Generate platform versions</>
           )}
         </button>
 
-        {/* platform selector */}
         <div className="psel">
           <div className="psel-head">
             <span className="ttl">Post to</span>
-            <button className="all" onClick={selectAllEligible}>
-              Select all eligible
-            </button>
+            <button className="all" onClick={selectAllEligible}>Select all eligible</button>
           </div>
           <div className="psel-grid">
-            {PLATFORMS.map((p) => {
-              const e = elig(p.key);
-              const sel = selected.has(p.key);
+            {platforms.map((p) => {
+              const e = elig(p.id);
+              const sel = selected.has(p.id);
               const warn = sel && e.warn;
               return (
                 <button
-                  key={p.key}
-                  className={
-                    "pchip" +
-                    (sel ? " is-selected" : "") +
-                    (!e.ok ? " is-disabled" : "") +
-                    (warn ? " is-warning" : "")
-                  }
-                  onClick={() => toggle(p.key)}
+                  key={p.id}
+                  className={"pchip" + (sel ? " is-selected" : "") + (!e.ok ? " is-disabled" : "") + (warn ? " is-warning" : "")}
+                  onClick={() => toggle(p.id)}
                   title={e.reason || e.warn || ""}
                 >
-                  <span className={"pf-dot " + p.cls} />
+                  <span className={"pf-dot pf-" + p.id} />
                   {p.name}
                   {!e.ok && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--ink-faint)" }} />}
                   {warn && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--spark-deep)" }} />}
@@ -299,8 +347,7 @@ export function Compose() {
       <div className="compose-right">
         <div className="preview-head">
           <span className="ttl">
-            Live preview · {shownKeys.length || postCount} platform
-            {(shownKeys.length || postCount) === 1 ? "" : "s"}
+            Live preview · {shownKeys.length || postCount} platform{(shownKeys.length || postCount) === 1 ? "" : "s"}
           </span>
           {variants && (
             <button
@@ -319,16 +366,14 @@ export function Compose() {
               <div key={k} className="npc shimmering in" style={{ minHeight: 150 }}>
                 <div className="npc-top">
                   <div className="npc-av" style={{ background: "#ddd", color: "var(--ink-faint)" }}>
-                    <PlatformLogo platform={k} />
+                    <PlatformLogo platform={k as PlatformKey} />
                   </div>
                   <div className="npc-id">
-                    <div className="nm" style={{ color: "var(--ink-faint)" }}>
-                      {PF[k].author}
-                    </div>
+                    <div className="nm" style={{ color: "var(--ink-faint)" }}>{authorFor(k)}</div>
                   </div>
                 </div>
                 <div className="npc-body" style={{ color: "var(--ink-faint)" }}>
-                  Writing a native {PF[k].name} version…
+                  Writing a native {platformById.get(k)?.name} version…
                 </div>
               </div>
             ))}
@@ -340,7 +385,9 @@ export function Compose() {
             {shownKeys.map((k, i) => (
               <NativePreviewCard
                 key={k}
-                p={PF[k]}
+                platform={platformById.get(k)!}
+                author={authorFor(k)}
+                handle={handleFor(k)}
                 variant={variants[k]}
                 idx={i}
                 onEdit={onEdit}
@@ -353,9 +400,7 @@ export function Compose() {
 
         {!generating && shownKeys.length === 0 && (
           <div className="preview-empty">
-            <div className="ill">
-              <Sparkle size={40} style={{ color: "var(--ai)" }} />
-            </div>
+            <div className="ill"><Sparkle size={40} style={{ color: "var(--ai)" }} /></div>
             <div>
               <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>No previews yet</div>
               <div>
@@ -371,21 +416,13 @@ export function Compose() {
       <div className="action-bar">
         <div className="action-summary">
           Posting to <strong>{postCount}</strong> platform{postCount === 1 ? "" : "s"}
-          {summaryScheduled > 0 && (
-            <>
-              {" "}
-              · <strong>{summaryScheduled}</strong> scheduled
-            </>
-          )}
         </div>
         <span className="spacer" />
-        <button className="btn btn-ghost" onClick={() => pushToast("Draft saved")}>
-          Save draft
-        </button>
-        <button className="btn btn-secondary" onClick={() => setModal("schedule")}>
+        <button className="btn btn-ghost" onClick={saveDraft}>Save draft</button>
+        <button className="btn btn-secondary" onClick={() => setModal("schedule")} disabled={!canPublish}>
           <Icon name="clock" size={17} /> Schedule
         </button>
-        <button className="btn btn-spark" onClick={() => setModal("post")} disabled={postCount === 0}>
+        <button className="btn btn-spark" onClick={() => setModal("post")} disabled={!canPublish}>
           <Icon name="send" size={17} /> Post now
         </button>
       </div>
@@ -393,18 +430,9 @@ export function Compose() {
       {modal && (
         <ConfirmModal
           mode={modal}
-          platforms={eligibleSelected}
+          platforms={shownKeys as PlatformKey[]}
           onClose={() => setModal(null)}
-          onConfirm={() => {
-            const count = postCount;
-            const wasSchedule = modal === "schedule";
-            setModal(null);
-            pushToast(
-              wasSchedule
-                ? `Scheduled to ${count} platforms for 9:00 AM`
-                : `Posted to ${count} platforms`,
-            );
-          }}
+          onConfirm={confirmAction}
         />
       )}
     </div>
