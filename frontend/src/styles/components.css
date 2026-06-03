@@ -1,0 +1,201 @@
+/* ============================================================
+   POSTIT — Shared Components
+   Buttons, inputs, chips, cards, wordmark, platform marks.
+   ============================================================ */
+
+/* ---------- Wordmark ---------- */
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+  line-height: 1;
+}
+.wordmark .wm-text { position: relative; }
+/* folded sticky-note corner off the final "t" */
+.wordmark .wm-corner {
+  display: inline-block;
+  width: 0.5em; height: 0.5em;
+  margin-left: 0.08em;
+  align-self: flex-start;
+  position: relative;
+  top: -0.04em;
+  background: var(--spark);
+  border-radius: 2px 2px 2px 0;
+  box-shadow: inset -0.12em -0.12em 0 rgba(0,0,0,0.08);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  --h: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  height: var(--h);
+  padding: 0 18px;
+  border-radius: var(--r-input);
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-sm { --h: 32px; padding: 0 12px; font-size: 14px; }
+.btn-lg { --h: 48px; padding: 0 24px; font-size: 16px; }
+.btn-block { display: flex; width: 100%; }
+
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { box-shadow: var(--e1); }
+
+.btn-spark { background: var(--spark); color: var(--ink); }
+.btn-spark:hover { background: var(--spark-deep); box-shadow: 0 4px 16px rgba(232,157,12,.3); }
+
+.btn-ai { background: var(--ai); color: #fff; }
+.btn-ai:hover { box-shadow: 0 4px 16px rgba(79,70,229,.3); }
+
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--hairline); }
+.btn-secondary:hover { border-color: var(--ink-faint); box-shadow: var(--e1); }
+
+.btn-ghost { background: transparent; color: var(--ink); }
+.btn-ghost:hover { background: var(--surface-sunken); transform: none; }
+
+.btn-danger { background: var(--danger); color: #fff; }
+
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.btn.is-loading { opacity: 1; }
+.spin {
+  width: 18px; height: 18px; border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  animation: spin .6s linear infinite;
+}
+.btn-spark .spin, .btn-secondary .spin { border-color: rgba(22,21,26,.25); border-top-color: var(--ink); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Inputs ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 14px; font-weight: 500; color: var(--ink-soft); }
+.input, .textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-input);
+  font-family: var(--font-ui);
+  font-size: 15px; color: var(--ink);
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+.input::placeholder, .textarea::placeholder { color: var(--ink-faint); }
+.input:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--ai);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.18);
+}
+.textarea { resize: vertical; line-height: 1.55; }
+.input-sunken { background: var(--surface-sunken); border-color: transparent; }
+
+/* ---------- Platform marks ----------
+   Brand-colored chips carrying each network's real logo (white on brand color). */
+.pf {
+  --c: var(--ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--c);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 600; font-size: 13px;
+  flex: none;
+}
+.pf-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--c); flex: none; display: inline-block; }
+/* Real brand logo inside a .pf chip (or round avatar) — scales with its
+   container and inherits the chip's text color (white on the brand color). */
+.pf-logo { width: 58%; height: 58%; fill: currentColor; }
+.pf-facebook  { --c: var(--pf-facebook); }
+.pf-instagram { --c: var(--pf-instagram); }
+.pf-threads   { --c: var(--pf-threads); }
+.pf-linkedin  { --c: var(--pf-linkedin); }
+.pf-x         { --c: var(--pf-x); }
+.pf-youtube   { --c: var(--pf-youtube); }
+.pf-tiktok    { --c: var(--pf-tiktok); }
+.pf-blogger   { --c: var(--pf-blogger); }
+.pf-wordpress { --c: var(--pf-wordpress); }
+[data-theme="dark"] .pf-threads, [data-theme="dark"] .pf-x { color: var(--ink); }
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-card);
+}
+.card-pad { padding: var(--s6); }
+
+/* ---------- Pills / badges ---------- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 12px;
+  border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 600;
+  background: var(--surface-sunken); color: var(--ink-soft);
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 600; letter-spacing: -0.01em;
+}
+.badge-success { background: var(--success-tint); color: var(--success); }
+.badge-warning { background: var(--warning-tint); color: var(--warning); }
+.badge-danger  { background: var(--danger-tint); color: var(--danger); }
+.badge-ai { background: var(--ai-tint); color: var(--ai); }
+.badge-spark { background: var(--spark-tint); color: var(--spark-deep); }
+.badge-dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+/* ---------- Platform chip (selector) ---------- */
+.pchip {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 40px; padding: 0 14px 0 10px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--hairline);
+  background: var(--surface);
+  font-size: 14px; font-weight: 500; color: var(--ink);
+  transition: all .15s var(--ease);
+  user-select: none;
+}
+.pchip:hover:not(.is-disabled) { border-color: var(--ink-faint); }
+.pchip.is-selected { border-color: var(--ink); background: var(--ink); color: #fff; }
+.pchip.is-selected .pf-dot { box-shadow: 0 0 0 2px rgba(255,255,255,.3); }
+.pchip.is-disabled { opacity: .45; cursor: not-allowed; }
+.pchip.is-warning { border-color: var(--spark); }
+
+/* ---------- Sparkle icon ---------- */
+.sparkle { width: 1em; height: 1em; display: inline-block; }
+
+/* ---------- Helpers ---------- */
+.row { display: flex; align-items: center; gap: var(--s3); }
+.col { display: flex; flex-direction: column; }
+.spacer { flex: 1; }
+.divider { height: 1px; background: var(--hairline); border: 0; width: 100%; }
+.section-eyebrow {
+  font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--spark-deep);
+}
+.mono-meta { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); letter-spacing: -0.02em; }
+
+/* image placeholder — striped, with mono label */
+.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  background-color: var(--surface-sunken);
+  background-image: repeating-linear-gradient(135deg, transparent, transparent 9px, rgba(22,21,26,.035) 9px, rgba(22,21,26,.035) 10px);
+  border-radius: var(--r-card);
+  color: var(--ink-faint);
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: -0.01em;
+  text-align: center;
+}

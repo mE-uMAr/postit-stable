@@ -1,0 +1,20 @@
+/* ============================================================
+   POSTIT — Global structural rules
+   (the bits that used to live in per-page <body> classes / inline
+   <style> blocks in the static prototype)
+   ============================================================ */
+
+/* Landing page clips horizontal overflow from off-canvas sticky-notes
+   and the hero paper-grid. Applying this to the root element (not a
+   nested div) keeps `position: sticky` on the nav working. */
+html {
+  overflow-x: hidden;
+}
+
+/* The dashboard is a fixed, full-viewport app — lock body scroll on the
+   `/app/*` routes only, scoped via :has() so /, /login, /signup still scroll. */
+html:has(.app-root),
+body:has(.app-root) {
+  height: 100%;
+  overflow: hidden;
+}
