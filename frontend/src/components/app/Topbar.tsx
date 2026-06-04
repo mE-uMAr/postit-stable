@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useTheme } from "./providers/ThemeProvider";
+import { useWorkspace } from "./providers/WorkspaceProvider";
 import { api } from "@/lib/api/client";
 import type { ApiPost, Paginated } from "@/lib/api/types";
 
@@ -30,6 +31,7 @@ export function Topbar() {
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const { user, logout } = useAuth();
+  const { role, canEdit } = useWorkspace();
 
   const segment = pathname.split("/").filter(Boolean).pop() ?? "compose";
   const title = TITLES[segment] ?? "Compose";
@@ -176,9 +178,12 @@ export function Topbar() {
         )}
       </div>
 
-      <button className="btn btn-spark" onClick={() => router.push("/app/compose")}>
-        <Icon name="plus" size={18} /> New post
-      </button>
+      {role === "viewer" && <span className="role-badge">View only</span>}
+      {canEdit && (
+        <button className="btn btn-spark" onClick={() => router.push("/app/compose")}>
+          <Icon name="plus" size={18} /> New post
+        </button>
+      )}
       <button className="avatar-btn" title="Sign out" onClick={() => void logout()}>
         {initials}
       </button>
