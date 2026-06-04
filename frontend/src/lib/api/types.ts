@@ -257,3 +257,46 @@ export interface AdminAuditLog {
   ip: string | null;
   created_at: string;
 }
+
+export interface AdminErrorLog {
+  id: string;
+  request_id: string | null;
+  method: string | null;
+  path: string | null;
+  status_code: number;
+  error_code: string | null;
+  message: string;
+  stack: string | null;
+  user_id: string | null;
+  workspace_id: string | null;
+  ip: string | null;
+  created_at: string;
+}
+
+export interface BestTime {
+  datetime: string;
+  label: string;
+  reason: string;
+}
+
+/* ---- Site content (admin-editable marketing site) ---- */
+export interface SiteCta {
+  label: string;
+  href: string;
+}
+
+export interface SiteContent {
+  announcement: { enabled: boolean; text: string; href?: string };
+  hero: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    primary_cta: SiteCta;
+    secondary_cta: SiteCta;
+  };
+  logos: string[];
+  features: { icon: string; title: string; body: string }[];
+  testimonials: { quote: string; name: string; role: string }[];
+  faq: { q: string; a: string }[];
+  flags: { social_auth: boolean; show_pricing: boolean };
+}

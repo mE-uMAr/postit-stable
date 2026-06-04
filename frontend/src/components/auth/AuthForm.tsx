@@ -127,23 +127,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
         <span>{error}</span>
       </div>
 
-      <div className="social-btns">
-        <button type="button" className="social-btn">
-          <svg className="social-glyph">
-            <use href="#g-google" />
-          </svg>{" "}
-          Continue with Google
-        </button>
-        <button type="button" className="social-btn">
-          <svg className="social-glyph">
-            <use href="#g-apple" />
-          </svg>{" "}
-          Continue with Apple
-        </button>
-      </div>
-
-      <div className="or-div">or</div>
-
       <div className="auth-fields">
         {isSignup && (
           <div className={"field" + (invalid.name ? " invalid" : "")} id="f-name">
@@ -190,7 +173,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               <label className="field-label" htmlFor="password">
                 Password
               </label>
-              <Link href="/login" className="link">
+              <Link href="/forgot" className="link">
                 Forgot password?
               </Link>
             </div>
@@ -254,14 +237,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </p>
         </>
       ) : (
-        <>
-          <p className="magic-link">
-            <a href="#">Email me a login link instead</a>
-          </p>
-          <p className="auth-switch">
-            New here? <Link href="/signup">Create an account.</Link>
-          </p>
-        </>
+        <p className="auth-switch">
+          New here? <Link href="/signup">Create an account.</Link>
+        </p>
       )}
     </form>
   );

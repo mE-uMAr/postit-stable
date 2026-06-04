@@ -14,12 +14,17 @@ from app.repositories.base import BaseRepository
 class PostRepository(BaseRepository[Post]):
     model = Post
 
-    def list_stmt(self, workspace_id: uuid.UUID, status: PostStatus | None = None):
+    def list_stmt(
+        self, workspace_id: uuid.UUID, status: PostStatus | None = None, q: str | None = None
+    ):
         stmt = select(Post).where(
             Post.workspace_id == workspace_id, Post.deleted_at.is_(None)
         )
         if status is not None:
             stmt = stmt.where(Post.status == status)
+        if q:
+            like = f"%{q.strip()}%"
+            stmt = stmt.where(Post.title.ilike(like) | Post.body.ilike(like))
         return stmt.order_by(Post.created_at.desc())
 
     async def get_in_workspace(self, post_id: uuid.UUID, workspace_id: uuid.UUID) -> Post | None:

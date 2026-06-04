@@ -22,7 +22,9 @@ const NAV: NavItem[] = [
   { label: "Subscriptions", icon: "card", href: "/admin/subscriptions" },
   { label: "Plans", icon: "duplicate", href: "/admin/plans" },
   { label: "Platforms", icon: "connections", href: "/admin/platforms" },
+  { label: "Site content", icon: "compose", href: "/admin/site" },
   { label: "Audit log", icon: "posts", href: "/admin/audit" },
+  { label: "Error log", icon: "shield", href: "/admin/errors" },
 ];
 
 const TITLES: Record<string, string> = {
@@ -31,7 +33,9 @@ const TITLES: Record<string, string> = {
   "/admin/subscriptions": "Subscriptions",
   "/admin/plans": "Plans",
   "/admin/platforms": "Platforms",
+  "/admin/site": "Site content",
   "/admin/audit": "Audit log",
+  "/admin/errors": "Error log",
 };
 
 export function AdminShell({ children }: { children: ReactNode }) {
