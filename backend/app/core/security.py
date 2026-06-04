@@ -18,7 +18,7 @@ from app.core.config import settings
 
 _ph = PasswordHasher()
 
-TokenType = Literal["access", "refresh"]
+TokenType = Literal["access", "refresh", "reset"]
 
 
 # --------------------------------------------------------------------------- #
@@ -83,6 +83,13 @@ def create_refresh_token(subject: str, extra: dict[str, Any] | None = None) -> t
     return create_token(
         subject, "refresh", timedelta(days=settings.REFRESH_TOKEN_TTL_DAYS), extra
     )
+
+
+def create_reset_token(subject: str) -> str:
+    token, _ = create_token(
+        subject, "reset", timedelta(minutes=settings.PASSWORD_RESET_TTL_MINUTES)
+    )
+    return token
 
 
 def decode_token(token: str, expected_type: TokenType | None = None) -> dict[str, Any]:

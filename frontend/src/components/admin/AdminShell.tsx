@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Icon } from "@/components/Icon";
 import { Wordmark } from "@/components/Wordmark";
@@ -36,9 +36,32 @@ const TITLES: Record<string, string> = {
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, toggle } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Defence in depth: middleware + the API already gate this, but never render
+  // the admin console for a non-superuser that somehow reaches it.
+  useEffect(() => {
+    if (!loading && user && !user.is_superuser) router.replace("/app/compose");
+  }, [loading, user, router]);
+
+  if (loading || !user?.is_superuser) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          color: "var(--ink-faint)",
+          font: "var(--ui-sm, 14px) system-ui",
+        }}
+      >
+        Checking access…
+      </div>
+    );
+  }
 
   const isActive = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
   const title = TITLES[pathname] ?? "Admin";

@@ -8,8 +8,10 @@ from app.api.deps import require_superuser
 from app.api.v1.routes.admin import (
     analytics,
     audit,
+    errors,
     plans,
     platforms,
+    site,
     subscriptions,
     users,
     workspaces,
@@ -28,3 +30,5 @@ admin_router.include_router(subscriptions.router)
 admin_router.include_router(plans.router)
 admin_router.include_router(platforms.router)
 admin_router.include_router(audit.router)
+admin_router.include_router(errors.router)
+admin_router.include_router(site.router)

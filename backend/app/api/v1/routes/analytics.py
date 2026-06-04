@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import WorkspaceContext, get_workspace_ctx
 from app.core.database import get_db
-from app.schemas.analytics import AnalyticsResponse
+from app.schemas.analytics import AnalyticsResponse, BestTimeSuggestion
 from app.services import analytics as analytics_service
+from app.services.ai import ai_service
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -20,3 +21,12 @@ async def get_analytics(
     ctx: WorkspaceContext = Depends(get_workspace_ctx),
 ):
     return await analytics_service.get_analytics(db, ctx.id, range_days)
+
+
+@router.get("/best-times", response_model=list[BestTimeSuggestion])
+async def best_times(
+    db: AsyncSession = Depends(get_db),
+    ctx: WorkspaceContext = Depends(get_workspace_ctx),
+):
+    """AI/heuristic best-time-to-post suggestions for the active workspace."""
+    return await ai_service.suggest_best_times(db, ctx.id)

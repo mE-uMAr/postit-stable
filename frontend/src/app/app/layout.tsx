@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/app/providers/ThemeProvider";
 import { ToastProvider } from "@/components/app/providers/ToastProvider";
+import { WorkspaceProvider } from "@/components/app/providers/WorkspaceProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
 
@@ -20,10 +21,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ToastProvider>
-          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-          <AppShell>{children}</AppShell>
-        </ToastProvider>
+        <WorkspaceProvider>
+          <ToastProvider>
+            <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+            <AppShell>{children}</AppShell>
+          </ToastProvider>
+        </WorkspaceProvider>
       </AuthProvider>
     </ThemeProvider>
   );

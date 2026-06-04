@@ -1,10 +1,22 @@
-"""Seed demo data: platforms, plans, a superadmin, and the Maple & Co workspace.
+"""Seed data for Postit.
 
-Idempotent — safe to run repeatedly. Usage:  python -m app.db.seed
+Idempotent — safe to run repeatedly. Two layers:
+
+* **core** — platforms, plans, editable site content, and the superadmin. Always
+  needed (production included).
+* **demo** — the "Maple & Co" sample workspace for demos/local dev.
+
+Usage::
+
+    python -m app.db.seed            # core + demo (default)
+    python -m app.db.seed --core     # core only (production bootstrap)
+    python -m app.db.seed --demo     # demo only
+    python -m app.db.seed --all      # both, explicit
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 from datetime import datetime, timedelta, timezone
 
@@ -35,6 +47,7 @@ from app.models.workspace import Workspace
 from app.repositories.billing import PlanRepository
 from app.repositories.user import UserRepository
 from app.repositories.workspace import WorkspaceRepository
+from app.services import site as site_service
 from app.services.rewrite import rewrite_for
 
 PLATFORMS = [
@@ -249,21 +262,46 @@ async def seed_demo(db) -> None:  # noqa: ANN001
     await db.flush()
 
 
-async def main() -> None:
+async def seed_core(db) -> None:  # noqa: ANN001
+    """Foundational, production-safe data."""
+    await seed_platforms(db)
+    await seed_plans(db)
+    await site_service.seed_defaults(db)
+    await seed_superadmin(db)
+
+
+async def run(*, core: bool = True, demo: bool = True) -> None:
     setup_logging()
     await create_all()
     async with SessionLocal() as db:
-        await seed_platforms(db)
-        await seed_plans(db)
-        await seed_superadmin(db)
-        await seed_demo(db)
+        if core:
+            await seed_core(db)
+        if demo:
+            # Demo depends on platforms + plans; (re)seed them idempotently.
+            await seed_platforms(db)
+            await seed_plans(db)
+            await seed_demo(db)
         await db.commit()
     logger.info(
-        "Seed complete. Superadmin=%s  Demo=%s",
+        "Seed complete (core=%s, demo=%s). Superadmin=%s",
+        core,
+        demo,
         settings.SEED_SUPERADMIN_EMAIL,
-        settings.SEED_DEMO_EMAIL,
     )
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Seed the Postit database.")
+    parser.add_argument("--core", action="store_true", help="seed core data only")
+    parser.add_argument("--demo", action="store_true", help="seed the demo workspace only")
+    parser.add_argument("--all", action="store_true", help="seed core + demo (default)")
+    args = parser.parse_args()
+
+    none_chosen = not (args.core or args.demo or args.all)
+    core = args.all or args.core or none_chosen
+    demo = args.all or args.demo or none_chosen
+    asyncio.run(run(core=core, demo=demo))
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

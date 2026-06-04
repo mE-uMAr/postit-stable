@@ -74,3 +74,18 @@ class AuditLogRead(ORMModel):
     meta: dict | None = None
     ip: str | None = None
     created_at: datetime
+
+
+class ErrorLogRead(ORMModel):
+    id: uuid.UUID
+    request_id: str | None = None
+    method: str | None = None
+    path: str | None = None
+    status_code: int
+    error_code: str | None = None
+    message: str
+    stack: str | None = None
+    user_id: uuid.UUID | None = None
+    workspace_id: uuid.UUID | None = None
+    ip: str | None = None
+    created_at: datetime

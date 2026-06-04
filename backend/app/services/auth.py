@@ -12,6 +12,7 @@ from app.core.exceptions import AuthError, ConflictError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_reset_token,
     decode_token,
     hash_password,
     refresh_token_expiry,
@@ -63,7 +64,9 @@ async def issue_tokens(
 ) -> TokenPair:
     extra = {"is_superuser": user.is_superuser}
     access, _ = create_access_token(str(user.id), extra=extra)
-    refresh, jti = create_refresh_token(str(user.id))
+    # Carry the superuser claim on the refresh token too, so edge middleware can
+    # gate the admin/app split even after the short-lived access cookie expires.
+    refresh, jti = create_refresh_token(str(user.id), extra=extra)
 
     tokens = RefreshTokenRepository(db)
     await tokens.create(
@@ -131,6 +134,31 @@ async def change_password(
         raise AuthError("Current password is incorrect.", code="invalid_password")
     user.hashed_password = hash_password(new_password)
     # Revoke all sessions on password change.
+    await RefreshTokenRepository(db).revoke_all_for_user(user.id, _now())
+
+
+async def request_password_reset(db: AsyncSession, email: str) -> str | None:
+    """Issue a short-lived reset token for an active account, else ``None``.
+
+    Stateless (signed JWT): no table needed. The caller is responsible for
+    delivering the link; we never reveal whether the email exists.
+    """
+    user = await UserRepository(db).get_by_email(email.lower().strip())
+    if user is None or not user.is_active:
+        return None
+    return create_reset_token(str(user.id))
+
+
+async def reset_password(db: AsyncSession, token: str, new_password: str) -> None:
+    try:
+        payload = decode_token(token, expected_type="reset")
+    except jwt.PyJWTError as exc:
+        raise AuthError("This reset link is invalid or has expired.", code="invalid_reset") from exc
+    user = await UserRepository(db).get(payload["sub"])
+    if user is None or not user.is_active:
+        raise AuthError("Account unavailable.", code="account_unavailable")
+    user.hashed_password = hash_password(new_password)
+    # Invalidate every existing session on password reset.
     await RefreshTokenRepository(db).revoke_all_for_user(user.id, _now())
 
 

@@ -94,14 +94,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
         body: JSON.stringify(payload),
       });
 
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
         setError(data?.error?.message || "Something went wrong. Please try again.");
         setLoading(false);
         return;
       }
 
-      const next = searchParams.get("next") || "/app/compose";
+      // Route by user type: platform admins go to the admin console, everyone
+      // else to the workspace app. An explicit ?next= wins for normal users.
+      const isSuperuser = data?.user?.is_superuser === true;
+      const next = isSuperuser ? "/admin" : searchParams.get("next") || "/app/compose";
       router.push(next);
       router.refresh();
     } catch {

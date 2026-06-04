@@ -7,9 +7,18 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import client_meta, get_current_active_user
+from app.core.config import settings
 from app.core.database import get_db
+from app.core.logging import logger
 from app.models.user import User
-from app.schemas.auth import AuthResponse, LoginRequest, RegisterRequest
+from app.schemas.auth import (
+    AuthResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+)
 from app.schemas.common import Message
 from app.schemas.token import RefreshRequest, TokenPair
 from app.schemas.user import PasswordChange, UserRead
@@ -67,6 +76,26 @@ async def refresh(payload: RefreshRequest, request: Request, db: AsyncSession = 
 async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)):
     await auth_service.logout(db, payload.refresh_token)
     return Message(message="Logged out.")
+
+
+@router.post("/forgot", response_model=ForgotPasswordResponse)
+async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Begin password reset. Always returns success (never leaks account existence)."""
+    token = await auth_service.request_password_reset(db, payload.email)
+    if token:
+        link = f"{settings.FRONTEND_URL}/reset?token={token}"
+        logger.info("Password reset link for %s: %s", payload.email, link)
+    return ForgotPasswordResponse(
+        message="If an account exists for that email, a reset link is on its way.",
+        # Surface the token in non-production so the demo works without an email service.
+        reset_token=token if (token and not settings.is_production) else None,
+    )
+
+
+@router.post("/reset", response_model=Message)
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    await auth_service.reset_password(db, payload.token, payload.new_password)
+    return Message(message="Password updated. Please sign in.")
 
 
 @router.get("/me", response_model=UserRead)
