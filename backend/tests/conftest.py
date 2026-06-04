@@ -11,7 +11,7 @@ _tmp.close()
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_tmp.name}"
 os.environ["REDIS_URL"] = ""
 os.environ["RATE_LIMIT_ENABLED"] = "false"
-os.environ["STRIPE_SECRET_KEY"] = ""
+os.environ["PADDLE_API_KEY"] = ""
 os.environ["SECRET_KEY"] = "test-secret"
 
 import pytest  # noqa: E402

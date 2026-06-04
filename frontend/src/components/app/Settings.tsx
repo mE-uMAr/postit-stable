@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { Sparkle } from "@/components/Sparkle";
 import { api, ApiError } from "@/lib/api/client";
 import { errorMessage, useApi } from "@/lib/api/useApi";
+import { openPaddleCheckout } from "@/lib/paddle";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type {
   ApiBrandVoice,
@@ -13,6 +14,7 @@ import type {
   ApiPlan,
   ApiSubscription,
   ApiUsage,
+  PaddleCheckout,
 } from "@/lib/api/types";
 import { useTheme } from "./providers/ThemeProvider";
 import { useToast } from "./providers/ToastProvider";
@@ -262,10 +264,19 @@ function BillingPanel({ pushToast }: { pushToast: (m: string) => void }) {
   const checkout = async (planId: string, cycle: "monthly" | "annual") => {
     setBusy(true);
     try {
-      const res = await api.post<{ url: string }>("billing/checkout", { plan_id: planId, billing_cycle: cycle });
-      window.location.href = res.url;
+      const res = await api.post<PaddleCheckout>("billing/checkout", {
+        plan_id: planId,
+        billing_cycle: cycle,
+      });
+      await openPaddleCheckout({
+        transactionId: res.transaction_id,
+        clientToken: res.client_token,
+        environment: res.environment,
+        successUrl: `${window.location.origin}/app/settings?billing=success`,
+      });
     } catch (e) {
       pushToast(e instanceof ApiError && e.status === 503 ? e.message : errorMessage(e));
+    } finally {
       setBusy(false);
     }
   };

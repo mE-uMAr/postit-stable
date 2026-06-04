@@ -1,4 +1,4 @@
-"""Plan catalog + Stripe-disabled billing path + admin plan CRUD."""
+"""Plan catalog + Paddle-disabled billing path + admin plan CRUD."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ async def test_default_subscription_is_free(client, unique_email):
 
 
 @pytest.mark.asyncio
-async def test_checkout_disabled_without_stripe(client, unique_email):
+async def test_checkout_disabled_without_paddle(client, unique_email):
     data = await _register(client, unique_email)
     headers = {"Authorization": f"Bearer {data['tokens']['access_token']}"}
     plans = (await client.get("/api/v1/subscriptions/plans")).json()
@@ -47,7 +47,7 @@ async def test_checkout_disabled_without_stripe(client, unique_email):
     res = await client.post(
         "/api/v1/billing/checkout", headers=headers, json={"plan_id": pro_id, "billing_cycle": "monthly"}
     )
-    # Stripe not configured in tests -> 503.
+    # Paddle not configured in tests -> 503.
     assert res.status_code == 503
 
 
