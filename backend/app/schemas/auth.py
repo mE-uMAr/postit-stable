@@ -23,3 +23,18 @@ class LoginRequest(BaseModel):
 class AuthResponse(BaseModel):
     user: UserRead
     tokens: TokenPair
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    # Only populated outside production so the demo flow works without email.
+    reset_token: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=10)
+    new_password: str = Field(min_length=8, max_length=128)

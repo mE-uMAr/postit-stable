@@ -41,3 +41,9 @@ class AnalyticsResponse(BaseModel):
     overview: AnalyticsOverview
     trend: list[TrendPoint]
     by_platform: list[PlatformBreakdown]
+
+
+class BestTimeSuggestion(BaseModel):
+    datetime: str       # ISO-8601 suggested slot
+    label: str          # e.g. "Tuesday 14:00"
+    reason: str

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -17,6 +18,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import logger, setup_logging
 from app.core.rate_limit import check_rate_limit
 from app.core.redis import init_kv
+from app.worker.scheduler import run_scheduler
 
 
 @asynccontextmanager
@@ -24,8 +26,21 @@ async def lifespan(app: FastAPI):
     setup_logging()
     await init_kv()
     logger.info("Starting %s (%s)", settings.PROJECT_NAME, settings.ENVIRONMENT)
+
+    stop = asyncio.Event()
+    scheduler_task: asyncio.Task | None = None
+    if settings.SCHEDULER_ENABLED:
+        scheduler_task = asyncio.create_task(run_scheduler(stop))
+
     yield
+
     logger.info("Shutting down")
+    if scheduler_task is not None:
+        stop.set()
+        try:
+            await asyncio.wait_for(scheduler_task, timeout=5)
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            scheduler_task.cancel()
 
 
 def create_app() -> FastAPI:

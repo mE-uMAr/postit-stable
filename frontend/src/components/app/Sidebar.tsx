@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Wordmark } from "@/components/Wordmark";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useWorkspace } from "@/components/app/providers/WorkspaceProvider";
 import type { IconName } from "@/lib/icons";
 
 interface NavItem {
@@ -30,8 +30,10 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { workspace, planName, loading } = useWorkspace();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const wsName = workspace?.name ?? (loading ? "Loading…" : "Your workspace");
+  const wsLogo = workspace?.logo_text || wsName.charAt(0).toUpperCase();
 
   return (
     <aside className={"sidebar" + (collapsed ? " collapsed" : "")}>
@@ -69,21 +71,13 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <span className="sb-label">{n.label}</span>
           </Link>
         ))}
-        {user?.is_superuser && (
-          <Link href="/admin" className="sb-item" title="Admin">
-            <span className="sb-ico">
-              <Icon name="shield" size={21} />
-            </span>
-            <span className="sb-label">Admin</span>
-          </Link>
-        )}
       </nav>
       <div className="sb-foot">
         <div className="sb-ws">
-          <div className="sb-ws-logo">M</div>
+          <div className="sb-ws-logo">{wsLogo}</div>
           <div className="sb-ws-meta">
-            <div className="sb-ws-name">Maple &amp; Co</div>
-            <div className="sb-ws-plan">Pro plan</div>
+            <div className="sb-ws-name">{wsName}</div>
+            <div className="sb-ws-plan">{planName ? `${planName} plan` : "—"}</div>
           </div>
           <span className="chev" style={{ marginLeft: "auto", color: "var(--ink-faint)" }}>
             <Icon name="chevd" size={16} />

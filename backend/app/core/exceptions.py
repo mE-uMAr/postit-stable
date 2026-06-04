@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import traceback
 from typing import Any
 
 from fastapi import FastAPI, Request, status
@@ -9,6 +10,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
 from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.core.logging import logger
 
 
 class AppError(Exception):
@@ -92,9 +95,43 @@ def _envelope(code: str, message: str, details: Any = None, request: Request | N
     return body
 
 
+async def _persist_error(
+    request: Request, exc: Exception, *, status_code: int, code: str, message: str
+) -> None:
+    """Write a server error (5xx) to the DB. Best-effort: never raises."""
+    # Imported lazily to avoid a circular import at module load.
+    from app.core.database import SessionLocal
+    from app.models.error_log import ErrorLog
+
+    try:
+        stack = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))[:20000]
+        async with SessionLocal() as session:
+            session.add(
+                ErrorLog(
+                    request_id=getattr(request.state, "request_id", None),
+                    method=request.method,
+                    path=request.url.path[:255],
+                    status_code=status_code,
+                    error_code=code,
+                    message=(message or str(exc) or "Unhandled error")[:2000],
+                    stack=stack,
+                    user_id=getattr(request.state, "user_id", None),
+                    ip=(request.client.host if request.client else None),
+                    user_agent=(request.headers.get("user-agent") or "")[:255] or None,
+                )
+            )
+            await session.commit()
+    except Exception:  # pragma: no cover - logging must never mask the original error
+        logger.exception("Failed to persist error log")
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(request: Request, exc: AppError) -> ORJSONResponse:
+        if exc.status_code >= 500:
+            await _persist_error(
+                request, exc, status_code=exc.status_code, code=exc.code, message=exc.message
+            )
         return ORJSONResponse(
             status_code=exc.status_code,
             content=_envelope(exc.code, exc.message, exc.details, request),
@@ -123,6 +160,14 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> ORJSONResponse:
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        await _persist_error(
+            request,
+            exc,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="internal_error",
+            message=str(exc) or "An unexpected error occurred.",
+        )
         return ORJSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=_envelope("internal_error", "An unexpected error occurred.", None, request),

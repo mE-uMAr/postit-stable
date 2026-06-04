@@ -15,14 +15,24 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Superuser gate for the admin section (defence in depth; API enforces too).
-  if (pathname.startsWith("/admin") && access) {
-    const payload = decodeJwtPayload(access);
-    if (payload && payload.is_superuser !== true) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/app/compose";
-      return NextResponse.redirect(url);
-    }
+  // Resolve the superuser claim from whichever token cookie is present. Both the
+  // access and refresh tokens carry it, so the gate survives access-token expiry.
+  const payload = decodeJwtPayload(access || refresh || "");
+  const isSuperuser = payload?.is_superuser === true;
+
+  // Strict separation of the two user types (defence in depth — the API enforces
+  // role on every route too):
+  //  • the admin console is superuser-only;
+  //  • superusers live in the admin console and never use the workspace app.
+  if (pathname.startsWith("/admin") && !isSuperuser) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/app/compose";
+    return NextResponse.redirect(url);
+  }
+  if (pathname.startsWith("/app") && isSuperuser) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/admin";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();

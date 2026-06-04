@@ -7,11 +7,13 @@ from app.models.auth import RefreshToken
 from app.models.billing import Invoice, PaymentMethod, Plan, Subscription, UsageCounter
 from app.models.brand_voice import BrandVoice
 from app.models.connection import Connection
+from app.models.error_log import ErrorLog
 from app.models.membership import Membership
 from app.models.notification import Notification, NotificationPreference
 from app.models.platform import Platform
 from app.models.post import Post, PostTarget
 from app.models.publish_job import PublishJob
+from app.models.site_setting import SiteSetting
 from app.models.user import User
 from app.models.workspace import Workspace
 
@@ -35,6 +37,8 @@ __all__ = [
     "NotificationPreference",
     "BrandVoice",
     "AuditLog",
+    "ErrorLog",
     "RefreshToken",
     "PublishJob",
+    "SiteSetting",
 ]

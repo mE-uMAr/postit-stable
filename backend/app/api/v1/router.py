@@ -14,6 +14,7 @@ from app.api.v1.routes import (
     notifications,
     platforms,
     posts,
+    site,
     subscriptions,
     users,
     workspaces,
@@ -34,4 +35,5 @@ api_router.include_router(subscriptions.router)
 api_router.include_router(billing.router)
 api_router.include_router(notifications.router)
 api_router.include_router(brand_voice.router)
+api_router.include_router(site.router)
 api_router.include_router(admin_router)

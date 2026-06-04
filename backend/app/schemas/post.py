@@ -28,6 +28,8 @@ class PostUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=160)
     tone: str | None = Field(default=None, max_length=40)
     media: list[MediaItem] | None = None
+    # Optional optimistic-concurrency guard; when present must match the server version.
+    version: int | None = Field(default=None, ge=0)
 
 
 class GenerateRequest(BaseModel):
@@ -66,6 +68,7 @@ class PostRead(ORMModel):
     tone: str
     media: list
     status: PostStatus
+    version: int = 1
     scheduled_at: datetime | None = None
     published_at: datetime | None = None
     created_at: datetime

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -38,15 +39,34 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_TTL_MINUTES: int = 30
     REFRESH_TOKEN_TTL_DAYS: int = 30
+    PASSWORD_RESET_TTL_MINUTES: int = 30
     TOKEN_ENCRYPTION_KEY: str | None = None
 
     # ---- CORS / frontend ----
     FRONTEND_URL: str = "http://localhost:3000"
-    CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    # NoDecode: keep pydantic-settings from JSON-parsing the raw env value so
+    # the validator below can accept a plain comma-separated string (or "*").
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
 
     # ---- Rate limiting ----
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 120
+
+    # ---- Scheduler / publish worker ----
+    SCHEDULER_ENABLED: bool = True          # run the in-process publish worker
+    SCHEDULER_POLL_SECONDS: int = 10        # how often to drain the outbox
+    SCHEDULER_MAX_ATTEMPTS: int = 3         # retries before a job is marked failed
+
+    # ---- AI provider (pluggable; see app/services/ai) ----
+    AI_ENABLED: bool = True                 # master switch; mock is used when off/unconfigured
+    AI_PROVIDER: str = "mock"               # mock | anthropic | openai | groq | gemini
+    AI_API_KEY: str | None = None
+    AI_MODEL: str | None = None             # provider-specific default applied when unset
+    AI_BASE_URL: str | None = None          # override for self-hosted / OpenAI-compatible gateways
+    AI_TIMEOUT_SECONDS: float = 30.0
+    AI_MAX_TOKENS: int = 600
 
     # ---- Paddle (Billing) ----
     PADDLE_API_KEY: str | None = None          # server-side secret key

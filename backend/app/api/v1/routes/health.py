@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.redis import get_kv
+from app.services.ai import ai_service
 
 router = APIRouter(tags=["health"])
 
@@ -29,5 +30,10 @@ async def readyz(db: AsyncSession = Depends(get_db)) -> dict:
     ready = db_ok
     return {
         "ready": ready,
-        "checks": {"database": db_ok, "kv": kv_ok, "paddle": settings.paddle_enabled},
+        "checks": {
+            "database": db_ok,
+            "kv": kv_ok,
+            "paddle": settings.paddle_enabled,
+            "ai": {"enabled": ai_service.enabled, "provider": ai_service.provider_name},
+        },
     }
