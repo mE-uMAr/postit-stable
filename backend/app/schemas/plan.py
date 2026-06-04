@@ -59,8 +59,8 @@ class PlanRead(ORMModel):
     is_active: bool
     is_public: bool
     sort_order: int
-    stripe_price_monthly_id: str | None = None
-    stripe_price_annual_id: str | None = None
+    paddle_price_monthly_id: str | None = None
+    paddle_price_annual_id: str | None = None
     created_at: datetime
 
     @computed_field

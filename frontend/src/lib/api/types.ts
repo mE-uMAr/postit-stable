@@ -131,6 +131,14 @@ export interface ApiPlan {
   is_active: boolean;
   is_public: boolean;
   sort_order: number;
+  paddle_price_monthly_id?: string | null;
+  paddle_price_annual_id?: string | null;
+}
+
+export interface PaddleCheckout {
+  transaction_id: string;
+  client_token: string | null;
+  environment: string;
 }
 
 export interface ApiSubscription {

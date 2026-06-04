@@ -48,11 +48,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 120
 
-    # ---- Stripe ----
-    STRIPE_SECRET_KEY: str | None = None
-    STRIPE_PUBLISHABLE_KEY: str | None = None
-    STRIPE_WEBHOOK_SECRET: str | None = None
-    STRIPE_CURRENCY: str = "usd"
+    # ---- Paddle (Billing) ----
+    PADDLE_API_KEY: str | None = None          # server-side secret key
+    PADDLE_CLIENT_TOKEN: str | None = None     # public client-side token (Paddle.js)
+    PADDLE_WEBHOOK_SECRET: str | None = None
+    PADDLE_ENVIRONMENT: str = "sandbox"        # sandbox | production
+    PADDLE_CURRENCY: str = "USD"
 
     # ---- Seed ----
     SEED_SUPERADMIN_EMAIL: str = "admin@postit.app"
@@ -76,8 +77,16 @@ class Settings(BaseSettings):
         return self.ENVIRONMENT.lower() == "production"
 
     @property
-    def stripe_enabled(self) -> bool:
-        return bool(self.STRIPE_SECRET_KEY and not self.STRIPE_SECRET_KEY.endswith("REPLACE_ME"))
+    def paddle_enabled(self) -> bool:
+        return bool(self.PADDLE_API_KEY and not self.PADDLE_API_KEY.endswith("REPLACE_ME"))
+
+    @property
+    def paddle_api_base(self) -> str:
+        return (
+            "https://api.paddle.com"
+            if self.PADDLE_ENVIRONMENT.lower() == "production"
+            else "https://sandbox-api.paddle.com"
+        )
 
 
 @lru_cache

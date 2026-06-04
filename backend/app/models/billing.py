@@ -44,9 +44,9 @@ class Plan(UUIDPKMixin, TimestampMixin, Base):
     is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    stripe_product_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    stripe_price_monthly_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    stripe_price_annual_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    paddle_product_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    paddle_price_monthly_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    paddle_price_annual_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     @property
     def price_annual_cents(self) -> int:
@@ -83,8 +83,8 @@ class Subscription(UUIDPKMixin, TimestampMixin, Base):
     trial_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
-    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
+    paddle_customer_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
+    paddle_subscription_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
 
 
 class Invoice(UUIDPKMixin, TimestampMixin, Base):
@@ -105,7 +105,7 @@ class Invoice(UUIDPKMixin, TimestampMixin, Base):
     period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     hosted_invoice_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    stripe_invoice_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
+    paddle_transaction_id: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
 
 
 class PaymentMethod(UUIDPKMixin, TimestampMixin, Base):
@@ -119,7 +119,7 @@ class PaymentMethod(UUIDPKMixin, TimestampMixin, Base):
     exp_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     exp_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    stripe_payment_method_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    paddle_payment_method_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class UsageCounter(UUIDPKMixin, TimestampMixin, Base):

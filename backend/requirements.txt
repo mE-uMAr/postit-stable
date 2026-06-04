@@ -25,7 +25,7 @@ httpx==0.28.1
 orjson==3.10.13
 
 # ---- Billing ----
-stripe==11.4.1
+# Paddle Billing is integrated over its REST API using httpx (above) — no extra SDK.
 
 # ---- Dev / test ----
 pytest==8.3.4

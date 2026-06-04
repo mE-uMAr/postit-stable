@@ -31,13 +31,14 @@ class SubscriptionDetail(SubscriptionRead):
 class CheckoutRequest(BaseModel):
     plan_id: uuid.UUID
     billing_cycle: BillingCycle = BillingCycle.monthly
-    success_url: str | None = None
-    cancel_url: str | None = None
 
 
-class CheckoutSession(BaseModel):
-    url: str
-    session_id: str | None = None
+class PaddleCheckout(BaseModel):
+    """Everything the frontend needs to open the Paddle.js checkout overlay."""
+
+    transaction_id: str
+    client_token: str | None = None
+    environment: str = "sandbox"
 
 
 class PortalSession(BaseModel):

@@ -1,4 +1,4 @@
-"""Plan management (admin) + Stripe price synchronisation."""
+"""Plan management (admin) + Paddle price synchronisation."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.models.billing import Plan
 from app.repositories.billing import PlanRepository
 from app.schemas.plan import PlanCreate, PlanUpdate
-from app.services import stripe_gateway
+from app.services import paddle_gateway
 
 
 async def list_public_plans(db: AsyncSession) -> list[Plan]:
@@ -28,14 +28,14 @@ async def get_plan(db: AsyncSession, plan_id: uuid.UUID) -> Plan:
     return plan
 
 
-async def _sync_stripe(db: AsyncSession, plan: Plan) -> None:
-    """Provision Stripe Product + Prices if Stripe is enabled (best-effort)."""
-    if not stripe_gateway.enabled() or plan.price_monthly_cents <= 0:
+async def _sync_paddle(db: AsyncSession, plan: Plan) -> None:
+    """Provision Paddle Product + Prices if Paddle is enabled (best-effort)."""
+    if not paddle_gateway.enabled() or plan.price_monthly_cents <= 0:
         return
-    ids = await stripe_gateway.ensure_plan_prices(plan)
-    plan.stripe_product_id = ids["product_id"]
-    plan.stripe_price_monthly_id = ids["price_monthly_id"]
-    plan.stripe_price_annual_id = ids["price_annual_id"]
+    ids = await paddle_gateway.ensure_plan_prices(plan)
+    plan.paddle_product_id = ids["product_id"]
+    plan.paddle_price_monthly_id = ids["price_monthly_id"]
+    plan.paddle_price_annual_id = ids["price_annual_id"]
     await db.flush()
 
 
@@ -44,7 +44,7 @@ async def create_plan(db: AsyncSession, data: PlanCreate) -> Plan:
     if await repo.get_by_code(data.code):
         raise ConflictError("A plan with that code already exists.", code="plan_code_taken")
     plan = await repo.create(**data.model_dump())
-    await _sync_stripe(db, plan)
+    await _sync_paddle(db, plan)
     return plan
 
 
@@ -58,10 +58,10 @@ async def update_plan(db: AsyncSession, plan_id: uuid.UUID, data: PlanUpdate) ->
         setattr(plan, key, value)
     await db.flush()
     if price_changed:
-        # Prices are immutable in Stripe; create fresh ones to reflect the new amount.
-        plan.stripe_price_monthly_id = None
-        plan.stripe_price_annual_id = None
-        await _sync_stripe(db, plan)
+        # Prices are immutable in Paddle; create fresh ones to reflect the new amount.
+        plan.paddle_price_monthly_id = None
+        plan.paddle_price_annual_id = None
+        await _sync_paddle(db, plan)
     return plan
 
 

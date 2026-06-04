@@ -1,9 +1,9 @@
-"""Billing orchestration: checkout, portal, and Stripe webhook sync."""
+"""Billing orchestration: Paddle checkout (transaction), portal, and webhook sync."""
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,17 +14,18 @@ from app.models.billing import Invoice, Subscription
 from app.models.enums import BillingCycle, InvoiceStatus, SubscriptionStatus
 from app.models.user import User
 from app.models.workspace import Workspace
-from app.repositories.billing import (
-    InvoiceRepository,
-    PlanRepository,
-    SubscriptionRepository,
-)
+from app.repositories.billing import InvoiceRepository, PlanRepository, SubscriptionRepository
+from app.services import paddle_gateway
 from app.services import plan as plan_service
-from app.services import stripe_gateway
 
 
-def _ts(value: int | None) -> datetime | None:
-    return datetime.fromtimestamp(value, tz=timezone.utc) if value else None
+def _parse_dt(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 async def get_or_create_subscription(db: AsyncSession, workspace: Workspace) -> Subscription:
@@ -47,82 +48,83 @@ async def create_checkout(
     *,
     plan_id: uuid.UUID,
     cycle: BillingCycle,
-    success_url: str | None,
-    cancel_url: str | None,
 ) -> dict[str, Any]:
     plan = await plan_service.get_plan(db, plan_id)
     if plan.price_monthly_cents <= 0:
         raise BillingError("That plan is free — no checkout required.", code="plan_is_free")
 
-    # Make sure the plan has Stripe prices.
-    if not plan.stripe_price_monthly_id or not plan.stripe_price_annual_id:
-        ids = await stripe_gateway.ensure_plan_prices(plan)
-        plan.stripe_product_id = ids["product_id"]
-        plan.stripe_price_monthly_id = ids["price_monthly_id"]
-        plan.stripe_price_annual_id = ids["price_annual_id"]
+    # Ensure the plan has Paddle prices.
+    if not plan.paddle_price_monthly_id or not plan.paddle_price_annual_id:
+        ids = await paddle_gateway.ensure_plan_prices(plan)
+        plan.paddle_product_id = ids["product_id"]
+        plan.paddle_price_monthly_id = ids["price_monthly_id"]
+        plan.paddle_price_annual_id = ids["price_annual_id"]
         await db.flush()
 
     price_id = (
-        plan.stripe_price_annual_id
-        if cycle == BillingCycle.annual
-        else plan.stripe_price_monthly_id
+        plan.paddle_price_annual_id if cycle == BillingCycle.annual else plan.paddle_price_monthly_id
     )
 
     sub = await get_or_create_subscription(db, workspace)
-    if not sub.stripe_customer_id:
-        sub.stripe_customer_id = await stripe_gateway.ensure_customer(
-            email=user.email,
-            name=workspace.name,
-            metadata={"workspace_id": str(workspace.id)},
-        )
+    if not sub.paddle_customer_id:
+        sub.paddle_customer_id = await paddle_gateway.ensure_customer(user.email, workspace.name)
         await db.flush()
 
-    base = settings.FRONTEND_URL.rstrip("/")
-    session = await stripe_gateway.create_checkout_session(
-        customer_id=sub.stripe_customer_id,
+    txn = await paddle_gateway.create_transaction(
+        customer_id=sub.paddle_customer_id,
         price_id=price_id,
-        success_url=success_url or f"{base}/app/settings?billing=success",
-        cancel_url=cancel_url or f"{base}/app/settings?billing=cancelled",
-        metadata={
+        custom_data={
             "workspace_id": str(workspace.id),
             "plan_id": str(plan.id),
             "cycle": cycle.value,
         },
     )
-    return {"url": session["url"], "session_id": session.get("id")}
+    return {
+        "transaction_id": txn["id"],
+        "client_token": settings.PADDLE_CLIENT_TOKEN,
+        "environment": settings.PADDLE_ENVIRONMENT,
+    }
 
 
 async def create_portal(db: AsyncSession, workspace: Workspace) -> dict[str, Any]:
     sub = await SubscriptionRepository(db).get_for_workspace(workspace.id)
-    if sub is None or not sub.stripe_customer_id:
+    if sub is None or not sub.paddle_customer_id:
         raise BillingError("No billing account yet — start a subscription first.", code="no_customer")
-    base = settings.FRONTEND_URL.rstrip("/")
-    session = await stripe_gateway.create_portal_session(
-        customer_id=sub.stripe_customer_id, return_url=f"{base}/app/settings"
-    )
-    return {"url": session["url"]}
+    url = await paddle_gateway.create_portal_session(customer_id=sub.paddle_customer_id)
+    if not url:
+        raise BillingError("Couldn't open the billing portal.", code="portal_failed")
+    return {"url": url}
 
 
 # --------------------------------------------------------------------------- #
-# Webhook handling
+# Webhook handling (Paddle Billing events)
 # --------------------------------------------------------------------------- #
+_STATUS_MAP = {
+    "active": SubscriptionStatus.active,
+    "trialing": SubscriptionStatus.trialing,
+    "past_due": SubscriptionStatus.past_due,
+    "paused": SubscriptionStatus.past_due,
+    "canceled": SubscriptionStatus.canceled,
+}
+
+
 async def handle_webhook_event(db: AsyncSession, event: dict[str, Any]) -> None:
-    event_type = event.get("type", "")
-    obj = event.get("data", {}).get("object", {})
+    event_type = event.get("event_type", "")
+    data = event.get("data", {}) or {}
 
-    if event_type == "checkout.session.completed":
-        await _on_checkout_completed(db, obj)
-    elif event_type in ("customer.subscription.updated", "customer.subscription.created"):
-        await _on_subscription_updated(db, obj)
-    elif event_type == "customer.subscription.deleted":
-        await _on_subscription_deleted(db, obj)
-    elif event_type in ("invoice.paid", "invoice.payment_succeeded", "invoice.payment_failed"):
-        await _on_invoice(db, obj, paid=event_type != "invoice.payment_failed")
+    if event_type == "subscription.canceled":
+        await _on_subscription_canceled(db, data)
+    elif event_type.startswith("subscription."):
+        await _on_subscription_sync(db, data)
+    elif event_type == "transaction.completed":
+        await _on_transaction_completed(db, data)
 
 
-async def _resolve_subscription(db: AsyncSession, *, customer: str | None, metadata: dict) -> Subscription | None:
+async def _resolve_subscription(
+    db: AsyncSession, *, custom_data: dict, customer_id: str | None
+) -> Subscription | None:
     repo = SubscriptionRepository(db)
-    ws_id = metadata.get("workspace_id")
+    ws_id = custom_data.get("workspace_id")
     if ws_id:
         try:
             sub = await repo.get_for_workspace(uuid.UUID(ws_id))
@@ -130,60 +132,65 @@ async def _resolve_subscription(db: AsyncSession, *, customer: str | None, metad
                 return sub
         except ValueError:
             pass
-    if customer:
-        return await repo.get_by_stripe_customer(customer)
+    if customer_id:
+        return await repo.get_by_paddle_customer(customer_id)
     return None
 
 
-async def _on_checkout_completed(db: AsyncSession, obj: dict) -> None:
-    metadata = obj.get("metadata", {}) or {}
-    sub = await _resolve_subscription(db, customer=obj.get("customer"), metadata=metadata)
+async def _match_plan_by_price(db: AsyncSession, price_id: str | None):  # noqa: ANN201
+    if not price_id:
+        return None, None
+    for plan in await PlanRepository(db).list_all():
+        if plan.paddle_price_monthly_id == price_id:
+            return plan, BillingCycle.monthly
+        if plan.paddle_price_annual_id == price_id:
+            return plan, BillingCycle.annual
+    return None, None
+
+
+async def _on_subscription_sync(db: AsyncSession, data: dict) -> None:
+    repo = SubscriptionRepository(db)
+    custom_data = data.get("custom_data") or {}
+    sub = await repo.get_by_paddle_subscription(data.get("id", "")) or await _resolve_subscription(
+        db, custom_data=custom_data, customer_id=data.get("customer_id")
+    )
     if sub is None:
         return
-    sub.stripe_customer_id = obj.get("customer") or sub.stripe_customer_id
-    sub.stripe_subscription_id = obj.get("subscription") or sub.stripe_subscription_id
-    plan_id = metadata.get("plan_id")
+
+    sub.paddle_subscription_id = data.get("id") or sub.paddle_subscription_id
+    sub.paddle_customer_id = data.get("customer_id") or sub.paddle_customer_id
+    sub.status = _STATUS_MAP.get(data.get("status", ""), sub.status)
+
+    period = data.get("current_billing_period") or {}
+    sub.current_period_start = _parse_dt(period.get("starts_at")) or sub.current_period_start
+    sub.current_period_end = _parse_dt(period.get("ends_at")) or sub.current_period_end
+
+    scheduled = data.get("scheduled_change") or {}
+    sub.cancel_at_period_end = scheduled.get("action") == "cancel"
+
+    # Resolve plan + cycle from custom_data, else from the subscription's price item.
+    plan_id = custom_data.get("plan_id")
+    cycle = custom_data.get("cycle")
     if plan_id:
         try:
             sub.plan_id = uuid.UUID(plan_id)
         except ValueError:
             pass
-    cycle = metadata.get("cycle")
-    if cycle in (BillingCycle.monthly, BillingCycle.annual):
+    else:
+        items = data.get("items") or []
+        price_id = items[0].get("price", {}).get("id") if items else None
+        plan, matched_cycle = await _match_plan_by_price(db, price_id)
+        if plan:
+            sub.plan_id = plan.id
+            cycle = cycle or (matched_cycle.value if matched_cycle else None)
+    if cycle in (BillingCycle.monthly.value, BillingCycle.annual.value):
         sub.billing_cycle = BillingCycle(cycle)
-    sub.status = SubscriptionStatus.active
+
     await db.flush()
 
 
-_STATUS_MAP = {
-    "active": SubscriptionStatus.active,
-    "trialing": SubscriptionStatus.trialing,
-    "past_due": SubscriptionStatus.past_due,
-    "canceled": SubscriptionStatus.canceled,
-    "unpaid": SubscriptionStatus.past_due,
-    "incomplete": SubscriptionStatus.incomplete,
-    "incomplete_expired": SubscriptionStatus.canceled,
-}
-
-
-async def _on_subscription_updated(db: AsyncSession, obj: dict) -> None:
-    repo = SubscriptionRepository(db)
-    sub = await repo.get_by_stripe_subscription(obj.get("id")) or await _resolve_subscription(
-        db, customer=obj.get("customer"), metadata=obj.get("metadata", {}) or {}
-    )
-    if sub is None:
-        return
-    sub.stripe_subscription_id = obj.get("id") or sub.stripe_subscription_id
-    sub.status = _STATUS_MAP.get(obj.get("status", ""), sub.status)
-    sub.current_period_start = _ts(obj.get("current_period_start")) or sub.current_period_start
-    sub.current_period_end = _ts(obj.get("current_period_end")) or sub.current_period_end
-    sub.cancel_at_period_end = bool(obj.get("cancel_at_period_end"))
-    await db.flush()
-
-
-async def _on_subscription_deleted(db: AsyncSession, obj: dict) -> None:
-    repo = SubscriptionRepository(db)
-    sub = await repo.get_by_stripe_subscription(obj.get("id"))
+async def _on_subscription_canceled(db: AsyncSession, data: dict) -> None:
+    sub = await SubscriptionRepository(db).get_by_paddle_subscription(data.get("id", ""))
     if sub is None:
         return
     sub.status = SubscriptionStatus.canceled
@@ -193,28 +200,31 @@ async def _on_subscription_deleted(db: AsyncSession, obj: dict) -> None:
     await db.flush()
 
 
-async def _on_invoice(db: AsyncSession, obj: dict, *, paid: bool) -> None:
+async def _on_transaction_completed(db: AsyncSession, data: dict) -> None:
     sub = await _resolve_subscription(
-        db, customer=obj.get("customer"), metadata=obj.get("metadata", {}) or {}
+        db, custom_data=data.get("custom_data") or {}, customer_id=data.get("customer_id")
     )
     if sub is None:
         return
     repo = InvoiceRepository(db)
-    existing = await repo.find_one(Invoice.stripe_invoice_id == obj.get("id"))
-    status = InvoiceStatus.paid if paid else InvoiceStatus.open
+    txn_id = data.get("id")
+    existing = await repo.find_one(Invoice.paddle_transaction_id == txn_id)
+    totals = (data.get("details") or {}).get("totals") or {}
+    grand_total = int(totals.get("grand_total") or 0)
+    currency = (data.get("currency_code") or "USD").lower()[:3]
+
     if existing:
-        existing.status = status
-        existing.amount_paid_cents = obj.get("amount_paid", existing.amount_paid_cents)
+        existing.status = InvoiceStatus.paid
+        existing.amount_paid_cents = grand_total
     else:
         await repo.create(
             workspace_id=sub.workspace_id,
-            number=obj.get("number"),
-            amount_due_cents=obj.get("amount_due", 0),
-            amount_paid_cents=obj.get("amount_paid", 0),
-            currency=obj.get("currency", "usd"),
-            status=status,
-            hosted_invoice_url=obj.get("hosted_invoice_url"),
-            stripe_invoice_id=obj.get("id"),
+            number=data.get("invoice_number"),
+            amount_due_cents=grand_total,
+            amount_paid_cents=grand_total,
+            currency=currency,
+            status=InvoiceStatus.paid,
+            paddle_transaction_id=txn_id,
         )
     await db.flush()
 

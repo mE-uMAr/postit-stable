@@ -33,11 +33,11 @@ class SubscriptionRepository(BaseRepository[Subscription]):
     async def get_for_workspace(self, workspace_id: uuid.UUID) -> Subscription | None:
         return await self.find_one(Subscription.workspace_id == workspace_id)
 
-    async def get_by_stripe_subscription(self, sub_id: str) -> Subscription | None:
-        return await self.find_one(Subscription.stripe_subscription_id == sub_id)
+    async def get_by_paddle_subscription(self, sub_id: str) -> Subscription | None:
+        return await self.find_one(Subscription.paddle_subscription_id == sub_id)
 
-    async def get_by_stripe_customer(self, customer_id: str) -> Subscription | None:
-        return await self.find_one(Subscription.stripe_customer_id == customer_id)
+    async def get_by_paddle_customer(self, customer_id: str) -> Subscription | None:
+        return await self.find_one(Subscription.paddle_customer_id == customer_id)
 
 
 class InvoiceRepository(BaseRepository[Invoice]):

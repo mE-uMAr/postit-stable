@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Wordmark } from "@/components/Wordmark";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { IconName } from "@/lib/icons";
 
 interface NavItem {
@@ -29,6 +30,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
@@ -67,6 +69,14 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <span className="sb-label">{n.label}</span>
           </Link>
         ))}
+        {user?.is_superuser && (
+          <Link href="/admin" className="sb-item" title="Admin">
+            <span className="sb-ico">
+              <Icon name="shield" size={21} />
+            </span>
+            <span className="sb-label">Admin</span>
+          </Link>
+        )}
       </nav>
       <div className="sb-foot">
         <div className="sb-ws">

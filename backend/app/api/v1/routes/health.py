@@ -29,5 +29,5 @@ async def readyz(db: AsyncSession = Depends(get_db)) -> dict:
     ready = db_ok
     return {
         "ready": ready,
-        "checks": {"database": db_ok, "kv": kv_ok, "stripe": settings.stripe_enabled},
+        "checks": {"database": db_ok, "kv": kv_ok, "paddle": settings.paddle_enabled},
     }
