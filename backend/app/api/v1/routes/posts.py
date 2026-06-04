@@ -38,11 +38,12 @@ _editor = require_workspace_role(WorkspaceRole.editor)
 @router.get("", response_model=Page[PostRead])
 async def list_posts(
     status: PostStatus | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=160),
     params: PageParams = Depends(),
     db: AsyncSession = Depends(get_db),
     ctx: WorkspaceContext = Depends(get_workspace_ctx),
 ):
-    stmt = PostRepository(db).list_stmt(ctx.id, status)
+    stmt = PostRepository(db).list_stmt(ctx.id, status, q)
     rows, total = await paginate(db, stmt, params)
     items = [PostRead.model_validate(p) for p in rows]
     return Page.create(items, total, params)

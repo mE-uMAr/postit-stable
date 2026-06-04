@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import "@/styles/tokens.css";
 import "@/styles/components.css";
 import "@/styles/globals.css";
+import "@/styles/enhancements.css";
 
 export const metadata: Metadata = {
   title: "Postit — Write it once. Postit everywhere.",
