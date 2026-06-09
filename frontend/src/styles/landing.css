@@ -84,6 +84,10 @@
   border-radius: var(--r-large);
   box-shadow: var(--e3);
   padding: 20px;
+  /* Floor for the looping demo. Combined with always-mounted cards + a reserved
+     genbar row (see HeroDemo), the panel height stays constant so the fan-in/out
+     animation never reflows or jerks the hero. */
+  min-height: 560px;
 }
 .demo-compose {
   background: var(--surface-sunken);

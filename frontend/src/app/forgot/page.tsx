@@ -34,8 +34,8 @@ export default function ForgotPage() {
   };
 
   return (
-    <main className="auth">
-      <section className="auth-form-wrap" style={{ margin: "0 auto" }}>
+    <main className="auth" style={{ gridTemplateColumns: "1fr" }}>
+      <section className="auth-form-wrap">
         {sent ? (
           <div className="auth-form">
             <h1>Check your email</h1>

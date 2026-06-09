@@ -114,29 +114,41 @@ export function HeroDemo() {
         </div>
       </div>
 
-      {gen.show && (
-        <div className={"demo-genbar" + (gen.shimmer ? " shimmer" : "")} id="genbar">
-          <Sparkle size={16} /> <span id="genlabel">{gen.label}</span>
-        </div>
-      )}
+      {/* Always rendered (opacity-toggled) so its row stays reserved — no layout shift. */}
+      <div
+        className={"demo-genbar" + (gen.shimmer ? " shimmer" : "")}
+        id="genbar"
+        style={{ transition: "opacity .3s ease", opacity: gen.show ? 1 : 0 }}
+      >
+        <Sparkle size={16} /> <span id="genlabel">{gen.label || "Generating platform versions…"}</span>
+      </div>
 
+      {/* All cards stay mounted; we animate opacity per-card so the panel height
+          is constant and the fan-in/out never reflows the hero. */}
       <div
         className="demo-cards"
         id="demoCards"
         style={{ transition: "opacity .5s ease", opacity: fade ? 0 : 1 }}
       >
-        {VARIANTS.slice(0, shownCount).map((v) => (
-          <div key={v.pf} className="demo-card in">
-            <div className="demo-card-head">
-              <span className={"pf " + v.cls} style={{ width: 24, height: 24, borderRadius: 7, fontSize: 11 }}>
-                <PlatformLogo platform={v.pf} />
-              </span>
-              <span className="nm">{v.name}</span>
-              <span className="hd">{v.handle}</span>
+        {VARIANTS.map((v, i) => {
+          const shown = i < shownCount;
+          return (
+            <div
+              key={v.pf}
+              className={"demo-card" + (shown ? " in" : "")}
+              style={shown ? undefined : { opacity: 0, pointerEvents: "none" }}
+            >
+              <div className="demo-card-head">
+                <span className={"pf " + v.cls} style={{ width: 24, height: 24, borderRadius: 7, fontSize: 11 }}>
+                  <PlatformLogo platform={v.pf} />
+                </span>
+                <span className="nm">{v.name}</span>
+                <span className="hd">{v.handle}</span>
+              </div>
+              <div className="demo-card-body" dangerouslySetInnerHTML={{ __html: v.body }} />
             </div>
-            <div className="demo-card-body" dangerouslySetInnerHTML={{ __html: v.body }} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

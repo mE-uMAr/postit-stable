@@ -110,8 +110,8 @@ function ResetForm() {
 
 export default function ResetPage() {
   return (
-    <main className="auth">
-      <section className="auth-form-wrap" style={{ margin: "0 auto" }}>
+    <main className="auth" style={{ gridTemplateColumns: "1fr" }}>
+      <section className="auth-form-wrap">
         <Suspense fallback={null}>
           <ResetForm />
         </Suspense>
