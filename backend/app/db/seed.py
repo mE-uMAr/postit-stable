@@ -1,10 +1,10 @@
 """Seed data for Postit.
 
-Idempotent — safe to run repeatedly. Two layers:
+Idempotent - safe to run repeatedly. Two layers:
 
-* **core** — platforms, plans, editable site content, and the superadmin. Always
+* **core** - platforms, plans, editable site content, and the superadmin. Always
   needed (production included).
-* **demo** — the "Maple & Co" sample workspace for demos/local dev.
+* **demo** - the "Maple & Co" sample workspace for demos/local dev.
 
 Usage::
 
@@ -106,15 +106,15 @@ TEAM = [
     ("Theo Marsh", "theo@maple.co", WorkspaceRole.viewer),
 ]
 
-# (body, platform_ids, status, day_offset) — offset is days from today:
+# (body, platform_ids, status, day_offset) - offset is days from today:
 # negative = already published, positive = scheduled into the future.
 POSTS = [
     ("Five small ways to refresh a room for spring", ["x", "linkedin", "wordpress"], PostStatus.published, -6),
     ("We hit 4,000 happy customers this week 🎉", ["x", "instagram", "threads", "facebook", "linkedin"], PostStatus.published, -2),
-    ("Launching our spring collection — lighter materials and a brighter palette", ["x", "linkedin", "instagram", "threads"], PostStatus.scheduled, 1),
+    ("Launching our spring collection - lighter materials and a brighter palette", ["x", "linkedin", "instagram", "threads"], PostStatus.scheduled, 1),
     ("Behind the scenes: how we photograph a new collection", ["instagram", "threads"], PostStatus.scheduled, 3),
     ("Customer spotlight: the Alvarez family kitchen", ["linkedin", "facebook"], PostStatus.scheduled, 5),
-    ("Weekend sale teaser — 48 hours only", ["x", "threads", "facebook"], PostStatus.scheduled, 8),
+    ("Weekend sale teaser - 48 hours only", ["x", "threads", "facebook"], PostStatus.scheduled, 8),
 ]
 
 # 30-day reach weights per platform (mirrors the frontend's by-platform split).
@@ -258,7 +258,7 @@ async def seed_demo(db) -> None:  # noqa: ANN001
                 )
             )
 
-    # Analytics — 60 days of daily rollup per platform.
+    # Analytics - 60 days of daily rollup per platform.
     today = now.date()
     for day_offset in range(60):
         day = today - timedelta(days=day_offset)

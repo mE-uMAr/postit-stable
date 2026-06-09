@@ -20,7 +20,7 @@ export function middleware(req: NextRequest) {
   const payload = decodeJwtPayload(access || refresh || "");
   const isSuperuser = payload?.is_superuser === true;
 
-  // Strict separation of the two user types (defence in depth — the API enforces
+  // Strict separation of the two user types (defence in depth - the API enforces
   // role on every route too):
   //  • the admin console is superuser-only;
   //  • superusers live in the admin console and never use the workspace app.

@@ -2,15 +2,31 @@
 
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { useToast } from "@/components/app/providers/ToastProvider";
+import { useConfirm } from "@/components/app/providers/ConfirmProvider";
 import { api } from "@/lib/api/client";
 import { errorMessage, useApi } from "@/lib/api/useApi";
 import type { ApiPlatform, PlatformKey } from "@/lib/api/types";
 
 export default function AdminPlatformsPage() {
   const pushToast = useToast();
+  const confirm = useConfirm();
   const { data, loading, reload } = useApi<ApiPlatform[]>("admin/platforms");
 
   const toggle = async (p: ApiPlatform) => {
+    if (p.is_active) {
+      const ok = await confirm({
+        title: `Disable ${p.name} for everyone?`,
+        body: (
+          <>
+            {p.name} will be hidden in the composer for <strong>all</strong> workspaces and new posts
+            can&apos;t target it. Existing scheduled posts to {p.name} may fail to publish.
+          </>
+        ),
+        confirmLabel: `Disable ${p.name}`,
+        danger: true,
+      });
+      if (!ok) return;
+    }
     try {
       await api.patch(`admin/platforms/${p.id}`, { is_active: !p.is_active });
       await reload();
@@ -50,7 +66,7 @@ export default function AdminPlatformsPage() {
               <span className={"badge " + (p.is_active ? "badge-success" : "")} style={!p.is_active ? { background: "var(--surface-sunken)", color: "var(--ink-faint)" } : undefined}>
                 <span className="badge-dot" /> {p.is_active ? "Active" : "Disabled"}
               </span>
-              <button className="btn btn-secondary btn-sm" onClick={() => toggle(p)}>
+              <button className="btn btn-secondary btn-sm" onClick={() => void toggle(p)}>
                 {p.is_active ? "Disable" : "Enable"}
               </button>
             </div>

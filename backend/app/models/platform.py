@@ -1,4 +1,4 @@
-"""Platform catalog — one row per social network (admin-toggleable)."""
+"""Platform catalog - one row per social network (admin-toggleable)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Groq provider — OpenAI-compatible API with a different base URL/model."""
+"""Groq provider - OpenAI-compatible API with a different base URL/model."""
 
 from __future__ import annotations
 

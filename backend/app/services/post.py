@@ -32,7 +32,7 @@ async def _reload_for_response(db: AsyncSession, post: Post) -> Post:
     """Make a post safe to serialize after a write.
 
     A flush expires server-side columns (``updated_at`` onupdate) and targets
-    added by FK aren't reflected on the relationship — refresh both so Pydantic
+    added by FK aren't reflected on the relationship - refresh both so Pydantic
     never triggers lazy IO outside the async greenlet.
     """
     await db.refresh(post)  # reload columns (clears expired updated_at)
@@ -42,11 +42,11 @@ async def _reload_for_response(db: AsyncSession, post: Post) -> Post:
 
 def eligibility(platform: Platform, *, has_media: bool, has_video: bool, char_count: int) -> dict:
     if platform.requires_video and not has_video:
-        return {"ok": False, "reason": "Needs a video — disabled for this post."}
+        return {"ok": False, "reason": "Needs a video - disabled for this post."}
     if platform.requires_media and not has_media:
         return {"ok": False, "reason": f"{platform.name} requires an image or video."}
     if platform.char_limit and char_count > platform.char_limit:
-        return {"ok": True, "warn": f"Over {platform.char_limit} characters — Postit will trim."}
+        return {"ok": True, "warn": f"Over {platform.char_limit} characters - Postit will trim."}
     return {"ok": True}
 
 

@@ -39,7 +39,7 @@ class AIService:
     def _system(self, brand_voice: BrandVoice | None) -> str:
         lines = [
             "You are a senior social media copywriter who makes one idea sound native",
-            "on each platform. Return ONLY the post text — no preamble, no quotes, no labels.",
+            "on each platform. Return ONLY the post text - no preamble, no quotes, no labels.",
         ]
         if brand_voice:
             if brand_voice.tone:

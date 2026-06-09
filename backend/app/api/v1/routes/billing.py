@@ -72,7 +72,7 @@ async def list_payment_methods(
 async def paddle_webhook(
     request: Request, paddle_signature: str | None = Header(default=None, alias="Paddle-Signature")
 ):
-    """Paddle webhook — unauthenticated, signature-verified. Uses its own DB session."""
+    """Paddle webhook - unauthenticated, signature-verified. Uses its own DB session."""
     payload = await request.body()
     try:
         event = paddle_gateway.verify_and_parse(payload, paddle_signature)

@@ -1,4 +1,4 @@
-"""Billing repositories — plans, subscriptions, invoices, payment methods, usage."""
+"""Billing repositories - plans, subscriptions, invoices, payment methods, usage."""
 
 from __future__ import annotations
 

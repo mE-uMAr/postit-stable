@@ -58,7 +58,7 @@ async def login_token(
     form: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """OAuth2 password flow — powers the Swagger 'Authorize' button (username = email)."""
+    """OAuth2 password flow - powers the Swagger 'Authorize' button (username = email)."""
     meta = client_meta(request)
     user = await auth_service.authenticate(db, email=form.username, password=form.password)
     return await auth_service.issue_tokens(db, user, user_agent=meta["user_agent"], ip=meta["ip"])

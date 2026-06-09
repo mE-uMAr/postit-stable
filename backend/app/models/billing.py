@@ -1,4 +1,4 @@
-"""Billing — plans, subscriptions, invoices, payment methods, usage counters."""
+"""Billing - plans, subscriptions, invoices, payment methods, usage counters."""
 
 from __future__ import annotations
 

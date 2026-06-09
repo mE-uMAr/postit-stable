@@ -1,4 +1,4 @@
-"""In-process publish worker — drains the ``publish_jobs`` outbox.
+"""In-process publish worker - drains the ``publish_jobs`` outbox.
 
 Started from the FastAPI lifespan when ``SCHEDULER_ENABLED`` is true. Polls for
 due jobs (``pending`` with ``run_after <= now``), claims each atomically, and

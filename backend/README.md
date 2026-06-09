@@ -9,7 +9,7 @@ brand voice, an **admin-editable site CMS**, **DB error logging**, and a superus
 FastAPI · SQLAlchemy 2.0 (async) · Alembic · Pydantic v2 · PyJWT (access + rotating refresh) ·
 argon2 · Redis (optional, in-memory fallback) · Paddle (httpx) · MySQL 8 (prod) / SQLite (dev).
 
-## Quick start (local, SQLite — no Docker needed)
+## Quick start (local, SQLite - no Docker needed)
 
 ```bash
 cd backend
@@ -62,13 +62,13 @@ Then admins create plans (which provision Paddle Products/Prices, annual price d
 discount %), users hit `POST /api/v1/billing/checkout` (returns a Paddle **transaction id** the
 frontend opens with the Paddle.js overlay), and the webhook (`/api/v1/billing/webhook`,
 `Paddle-Signature` HMAC-verified) syncs subscription/invoice state. Sandbox test card:
-`4242 4242 4242 4242`, any future expiry / CVC. Paddle is a Merchant of Record — integrated over
+`4242 4242 4242 4242`, any future expiry / CVC. Paddle is a Merchant of Record - integrated over
 its REST API with `httpx` (no SDK dependency).
 
 ## Pluggable AI (generation)
 The rewrite engine is provider-agnostic (`app/services/ai/`). It ships with a deterministic
 offline **mock** (default) and thin `httpx` adapters for **Anthropic, OpenAI, Groq, and Gemini**.
-Point it at any model via env — any failure (no key, network, provider outage) degrades gracefully
+Point it at any model via env - any failure (no key, network, provider outage) degrades gracefully
 back to the mock so generation never hard-fails:
 
 ```

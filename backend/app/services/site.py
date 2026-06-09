@@ -15,13 +15,13 @@ from app.models.site_setting import SiteSetting
 DEFAULT_CONTENT: dict = {
     "announcement": {
         "enabled": True,
-        "text": "Postit is live — write once, post natively everywhere.",
+        "text": "Postit is live - write once, post natively everywhere.",
         "href": "/signup",
     },
     "hero": {
         "eyebrow": "AI social publishing",
         "title": "Write once. Sound native on every platform.",
-        "subtitle": "Postit turns one idea into nine on-brand posts — then schedules, "
+        "subtitle": "Postit turns one idea into nine on-brand posts - then schedules, "
         "publishes, and measures them from a single calm workspace.",
         "primary_cta": {"label": "Start free", "href": "/signup"},
         "secondary_cta": {"label": "See how it works", "href": "#how"},
@@ -31,7 +31,7 @@ DEFAULT_CONTENT: dict = {
         {
             "icon": "compose",
             "title": "One composer, nine native posts",
-            "body": "Draft once. Postit rewrites for X, LinkedIn, Instagram, Threads and more — "
+            "body": "Draft once. Postit rewrites for X, LinkedIn, Instagram, Threads and more - "
             "respecting each platform's voice and limits.",
         },
         {
@@ -42,7 +42,7 @@ DEFAULT_CONTENT: dict = {
         {
             "icon": "analytics",
             "title": "Analytics that mean something",
-            "body": "Reach, engagement and growth across every platform — rolled up, not scattered.",
+            "body": "Reach, engagement and growth across every platform - rolled up, not scattered.",
         },
         {
             "icon": "shield",
@@ -79,7 +79,7 @@ DEFAULT_CONTENT: dict = {
         },
         {
             "q": "Can I schedule and auto-publish?",
-            "a": "Yes — schedule a post and our worker publishes it at the right moment.",
+            "a": "Yes - schedule a post and our worker publishes it at the right moment.",
         },
     ],
     "flags": {

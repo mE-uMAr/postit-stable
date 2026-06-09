@@ -27,7 +27,7 @@ async def current_subscription(
 ):
     sub, plan = await billing_service.get_subscription_with_plan(db, ctx.workspace)
     # Build from the base schema (no relationship access) then attach the plan we
-    # already fetched — avoids a lazy-load of ``sub.plan`` in the async context.
+    # already fetched - avoids a lazy-load of ``sub.plan`` in the async context.
     return SubscriptionDetail(
         **SubscriptionRead.model_validate(sub).model_dump(),
         plan=PlanRead.model_validate(plan),

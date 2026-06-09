@@ -1,5 +1,5 @@
 /* ============================================================
-   POSTIT — Shared Components
+   POSTIT - Shared Components
    Buttons, inputs, chips, cards, wordmark, platform marks.
    ============================================================ */
 
@@ -51,7 +51,7 @@
 .btn-lg { --h: 48px; padding: 0 24px; font-size: 16px; }
 .btn-block { display: flex; width: 100%; }
 
-.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary { background: var(--ink); color: var(--canvas); }
 .btn-primary:hover { box-shadow: var(--e1); }
 
 .btn-spark { background: var(--spark); color: var(--ink); }
@@ -115,7 +115,7 @@
   flex: none;
 }
 .pf-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--c); flex: none; display: inline-block; }
-/* Real brand logo inside a .pf chip (or round avatar) — scales with its
+/* Real brand logo inside a .pf chip (or round avatar) - scales with its
    container and inherits the chip's text color (white on the brand color). */
 .pf-logo { width: 58%; height: 58%; fill: currentColor; }
 .pf-facebook  { --c: var(--pf-facebook); }
@@ -169,7 +169,7 @@
   user-select: none;
 }
 .pchip:hover:not(.is-disabled) { border-color: var(--ink-faint); }
-.pchip.is-selected { border-color: var(--ink); background: var(--ink); color: #fff; }
+.pchip.is-selected { border-color: var(--ink); background: var(--ink); color: var(--canvas); }
 .pchip.is-selected .pf-dot { box-shadow: 0 0 0 2px rgba(255,255,255,.3); }
 .pchip.is-disabled { opacity: .45; cursor: not-allowed; }
 .pchip.is-warning { border-color: var(--spark); }
@@ -188,7 +188,7 @@
 }
 .mono-meta { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); letter-spacing: -0.02em; }
 
-/* image placeholder — striped, with mono label */
+/* image placeholder - striped, with mono label */
 .placeholder {
   display: flex; align-items: center; justify-content: center;
   background-color: var(--surface-sunken);

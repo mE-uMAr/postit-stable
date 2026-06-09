@@ -1,4 +1,4 @@
-"""Membership — links a user to a workspace with a role."""
+"""Membership - links a user to a workspace with a role."""
 
 from __future__ import annotations
 

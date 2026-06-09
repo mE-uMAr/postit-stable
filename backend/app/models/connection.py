@@ -1,4 +1,4 @@
-"""Connection — a workspace's linked social account on a platform."""
+"""Connection - a workspace's linked social account on a platform."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   Postit — icon path data (1.75px line, rounded)
+   Postit - icon path data (1.75px line, rounded)
    Each value is one or more SVG path "d" segments joined by " M".
    ============================================================ */
 

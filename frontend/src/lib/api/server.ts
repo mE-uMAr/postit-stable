@@ -55,7 +55,7 @@ export async function fetchPrimaryWorkspaceId(accessToken: string): Promise<stri
   }
 }
 
-/** Decode (without verifying) a JWT payload — used only for UX gating in middleware. */
+/** Decode (without verifying) a JWT payload - used only for UX gating in middleware. */
 export function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const part = token.split(".")[1];

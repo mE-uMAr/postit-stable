@@ -17,7 +17,7 @@ interface WorkspaceContextValue {
   /** True when there is genuinely no workspace yet (e.g. a fresh account). */
   empty: boolean;
   reload: () => Promise<void>;
-  /** Role gate helpers — backend enforces too; these drive UI affordances. */
+  /** Role gate helpers - backend enforces too; these drive UI affordances. */
   atLeast: (role: WorkspaceRole) => boolean;
   canEdit: boolean;
   canManage: boolean;

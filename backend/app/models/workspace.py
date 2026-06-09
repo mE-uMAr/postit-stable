@@ -1,4 +1,4 @@
-"""Workspace — the tenant boundary for posts, connections, billing."""
+"""Workspace - the tenant boundary for posts, connections, billing."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Alembic environment — async-aware, reads the URL from app settings."""
+"""Alembic environment - async-aware, reads the URL from app settings."""
 
 from __future__ import annotations
 

@@ -7,6 +7,7 @@ import { api } from "@/lib/api/client";
 import { errorMessage, useApi } from "@/lib/api/useApi";
 import type { ApiConnection, ApiPlatform, ConnectionStatus, PlatformKey } from "@/lib/api/types";
 import { useToast } from "./providers/ToastProvider";
+import { useConfirm } from "./providers/ConfirmProvider";
 
 function StatusBadge({ status }: { status: ConnectionStatus }) {
   if (status === "connected")
@@ -30,6 +31,7 @@ function StatusBadge({ status }: { status: ConnectionStatus }) {
 
 export function Connections() {
   const pushToast = useToast();
+  const confirm = useConfirm();
   const platforms = useApi<ApiPlatform[]>("platforms");
   const connections = useApi<ApiConnection[]>("connections");
   const [busy, setBusy] = useState<string | null>(null);
@@ -44,6 +46,20 @@ export function Connections() {
   const totalCount = (platforms.data ?? []).length;
 
   const act = async (platformId: string, action: "connect" | "disconnect" | "reconnect", name: string) => {
+    if (action === "disconnect") {
+      const ok = await confirm({
+        title: `Disconnect ${name}?`,
+        body: (
+          <>
+            Postit will stop posting to <strong>{name}</strong> and any scheduled posts targeting it
+            won&apos;t go out. You can reconnect any time.
+          </>
+        ),
+        confirmLabel: "Disconnect",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     setBusy(platformId + action);
     try {
       await api.post(`connections/${platformId}/${action}`, {});

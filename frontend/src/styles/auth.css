@@ -1,5 +1,5 @@
 /* ============================================================
-   POSTIT — Auth (signup / login) styles
+   POSTIT - Auth (signup / login) styles
    ============================================================ */
 .auth { min-height: 100vh; display: grid; grid-template-columns: 45% 55%; }
 
@@ -11,10 +11,10 @@
   display: flex; flex-direction: column;
   position: relative; overflow: hidden;
 }
-.auth-brand .wordmark { color: #fff; font-size: 24px; }
+.auth-brand .wordmark { color: var(--canvas); font-size: 24px; }
 .auth-brand .wm-corner { background: var(--spark); }
 .auth-brand-body { margin-top: auto; margin-bottom: auto; max-width: 420px; }
-.auth-brand-body h2 { color: #fff; font-size: 32px; line-height: 1.2; margin-bottom: 16px; }
+.auth-brand-body h2 { color: var(--canvas); font-size: 32px; line-height: 1.2; margin-bottom: 16px; }
 .auth-brand-body p { color: #B8B4C0; font-size: 17px; line-height: 1.55; }
 
 /* stacked preview cards as payoff reminder */

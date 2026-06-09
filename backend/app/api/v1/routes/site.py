@@ -1,4 +1,4 @@
-"""Public site content (no auth) — consumed by the marketing landing page."""
+"""Public site content (no auth) - consumed by the marketing landing page."""
 
 from __future__ import annotations
 
