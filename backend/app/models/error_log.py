@@ -1,4 +1,4 @@
-"""Persisted server-error log — written best-effort by the global exception handler."""
+"""Persisted server-error log - written best-effort by the global exception handler."""
 
 from __future__ import annotations
 

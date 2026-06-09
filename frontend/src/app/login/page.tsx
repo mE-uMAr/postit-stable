@@ -9,7 +9,7 @@ import { PlatformLogo } from "@/components/PlatformLogo";
 import "@/styles/auth.css";
 
 export const metadata: Metadata = {
-  title: "Welcome back — Postit",
+  title: "Welcome back - Postit",
 };
 
 export default function LoginPage() {
@@ -46,7 +46,7 @@ export default function LoginPage() {
                   <span className="hd">1d</span>
                 </div>
                 <div className="b">
-                  We&apos;re thrilled to launch our Spring Collection today — lighter materials, a brighter
+                  We&apos;re thrilled to launch our Spring Collection today - lighter materials, a brighter
                   palette.
                 </div>
               </div>

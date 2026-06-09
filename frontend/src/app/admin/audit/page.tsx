@@ -21,7 +21,7 @@ export default function AdminAuditPage() {
       <div className="vh">
         <div className="vh-title">
           <h2>Audit log</h2>
-          <p>{data ? `${data.total} events` : "—"}</p>
+          <p>{data ? `${data.total} events` : "-"}</p>
         </div>
       </div>
 
@@ -39,8 +39,8 @@ export default function AdminAuditPage() {
           <div key={r.id} className="posts-row" style={{ gridTemplateColumns: "180px minmax(0,1fr) 160px 140px" }}>
             <span className="post-date">{formatDate(r.created_at)}</span>
             <span className="post-text" style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{r.action}</span>
-            <span className="post-sub">{r.target_type ? `${r.target_type}` : "—"}</span>
-            <span className="post-sub">{r.ip ?? "—"}</span>
+            <span className="post-sub">{r.target_type ? `${r.target_type}` : "-"}</span>
+            <span className="post-sub">{r.ip ?? "-"}</span>
           </div>
         ))}
       </div>

@@ -1,5 +1,5 @@
 /* ============================================================
-   Postit — motion helpers (framer-motion variants + utils)
+   Postit - motion helpers (framer-motion variants + utils)
    All variants degrade gracefully when the user prefers reduced motion.
    ============================================================ */
 

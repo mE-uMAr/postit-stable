@@ -1,4 +1,4 @@
-"""Brand voice — per-workspace default tone + guidelines for the rewrite engine."""
+"""Brand voice - per-workspace default tone + guidelines for the rewrite engine."""
 
 from __future__ import annotations
 

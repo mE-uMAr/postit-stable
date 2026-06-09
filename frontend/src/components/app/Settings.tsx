@@ -18,6 +18,7 @@ import type {
 } from "@/lib/api/types";
 import { useTheme } from "./providers/ThemeProvider";
 import { useToast } from "./providers/ToastProvider";
+import { useConfirm } from "./providers/ConfirmProvider";
 
 const S_TABS = ["Profile", "Workspace & team", "Brand voice", "Billing", "Notifications"];
 
@@ -135,6 +136,7 @@ function ProfilePanel({
 
 /* ----------------------------------- Team --------------------------------- */
 function TeamPanel({ pushToast }: { pushToast: (m: string) => void }) {
+  const confirm = useConfirm();
   const { data, loading, error, reload } = useApi<ApiMember[]>("members");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("editor");
@@ -151,9 +153,21 @@ function TeamPanel({ pushToast }: { pushToast: (m: string) => void }) {
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = async (m: ApiMember) => {
+    const ok = await confirm({
+      title: `Remove ${m.name}?`,
+      body: (
+        <>
+          <strong>{m.name}</strong> ({m.email}) will lose access to this workspace immediately. You can
+          re-invite them later.
+        </>
+      ),
+      confirmLabel: "Remove member",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await api.del(`members/${id}`);
+      await api.del(`members/${m.id}`);
       await reload();
       pushToast("Member removed");
     } catch (e) {
@@ -176,7 +190,7 @@ function TeamPanel({ pushToast }: { pushToast: (m: string) => void }) {
           </div>
           <span className="pill">{m.role}</span>
           {m.role !== "owner" && (
-            <button className="btn btn-ghost btn-sm" style={{ color: "var(--ink-faint)" }} onClick={() => remove(m.id)}>
+            <button className="btn btn-ghost btn-sm" style={{ color: "var(--ink-faint)" }} onClick={() => void remove(m)}>
               Remove
             </button>
           )}

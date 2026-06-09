@@ -1,4 +1,4 @@
-"""Pytest fixtures — isolated SQLite DB + ASGI client."""
+"""Pytest fixtures - isolated SQLite DB + ASGI client."""
 
 from __future__ import annotations
 

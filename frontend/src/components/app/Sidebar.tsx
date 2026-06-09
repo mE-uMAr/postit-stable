@@ -77,7 +77,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           <div className="sb-ws-logo">{wsLogo}</div>
           <div className="sb-ws-meta">
             <div className="sb-ws-name">{wsName}</div>
-            <div className="sb-ws-plan">{planName ? `${planName} plan` : "—"}</div>
+            <div className="sb-ws-plan">{planName ? `${planName} plan` : "-"}</div>
           </div>
           <span className="chev" style={{ marginLeft: "auto", color: "var(--ink-faint)" }}>
             <Icon name="chevd" size={16} />

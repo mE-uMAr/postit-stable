@@ -1,4 +1,4 @@
-"""Superuser admin API — every route requires `is_superuser`."""
+"""Superuser admin API - every route requires `is_superuser`."""
 
 from __future__ import annotations
 

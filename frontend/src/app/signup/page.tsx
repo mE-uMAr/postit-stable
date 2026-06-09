@@ -27,7 +27,7 @@ export default function SignupPage() {
           <div className="auth-brand-body">
             <h2>One idea in. Nine native posts out.</h2>
             <p>
-              Connect your platforms after sign-up — it takes about a minute. Then write once and watch it go
+              Connect your platforms after sign-up - it takes about a minute. Then write once and watch it go
               everywhere.
             </p>
             <div className="auth-stack">
@@ -50,7 +50,7 @@ export default function SignupPage() {
                   <span className="hd">1d</span>
                 </div>
                 <div className="b">
-                  We&apos;re thrilled to launch our Spring Collection today — lighter materials, a brighter
+                  We&apos;re thrilled to launch our Spring Collection today - lighter materials, a brighter
                   palette.
                 </div>
               </div>

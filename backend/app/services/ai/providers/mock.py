@@ -1,4 +1,4 @@
-"""Deterministic offline provider — the default and the universal fallback."""
+"""Deterministic offline provider - the default and the universal fallback."""
 
 from __future__ import annotations
 

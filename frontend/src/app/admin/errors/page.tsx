@@ -24,7 +24,7 @@ export default function AdminErrorsPage() {
       <div className="vh">
         <div className="vh-title">
           <h2>Error log</h2>
-          <p>{data ? `${data.total} captured server errors` : "—"}</p>
+          <p>{data ? `${data.total} captured server errors` : "-"}</p>
         </div>
       </div>
 

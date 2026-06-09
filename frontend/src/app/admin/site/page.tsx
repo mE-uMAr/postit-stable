@@ -4,12 +4,14 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/app/providers/ToastProvider";
+import { useConfirm } from "@/components/app/providers/ConfirmProvider";
 import { api } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/useApi";
 import type { SiteContent } from "@/lib/api/types";
 
 export default function AdminSitePage() {
   const pushToast = useToast();
+  const confirm = useConfirm();
   const [c, setC] = useState<SiteContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,6 +38,12 @@ export default function AdminSitePage() {
   }
 
   const save = async () => {
+    const ok = await confirm({
+      title: "Publish site changes?",
+      body: "Your edits go live on the public marketing site immediately for all visitors.",
+      confirmLabel: "Publish now",
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       const next = await api.put<SiteContent>("admin/site", c as unknown as Record<string, unknown>);

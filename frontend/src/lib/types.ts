@@ -1,5 +1,5 @@
 /* ============================================================
-   Postit — shared domain types
+   Postit - shared domain types
    ============================================================ */
 
 export type PlatformKey =

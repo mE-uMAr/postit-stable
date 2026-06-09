@@ -51,7 +51,7 @@ async def create_checkout(
 ) -> dict[str, Any]:
     plan = await plan_service.get_plan(db, plan_id)
     if plan.price_monthly_cents <= 0:
-        raise BillingError("That plan is free — no checkout required.", code="plan_is_free")
+        raise BillingError("That plan is free - no checkout required.", code="plan_is_free")
 
     # Ensure the plan has Paddle prices.
     if not plan.paddle_price_monthly_id or not plan.paddle_price_annual_id:
@@ -89,7 +89,7 @@ async def create_checkout(
 async def create_portal(db: AsyncSession, workspace: Workspace) -> dict[str, Any]:
     sub = await SubscriptionRepository(db).get_for_workspace(workspace.id)
     if sub is None or not sub.paddle_customer_id:
-        raise BillingError("No billing account yet — start a subscription first.", code="no_customer")
+        raise BillingError("No billing account yet - start a subscription first.", code="no_customer")
     url = await paddle_gateway.create_portal_session(customer_id=sub.paddle_customer_id)
     if not url:
         raise BillingError("Couldn't open the billing portal.", code="portal_failed")

@@ -24,7 +24,7 @@ class ConnectionRead(ORMModel):
 
 
 class ConnectionConnect(BaseModel):
-    """Mock OAuth connect — real flow would exchange a provider code."""
+    """Mock OAuth connect - real flow would exchange a provider code."""
 
     handle: str | None = None
     display_name: str | None = None

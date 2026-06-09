@@ -1,4 +1,4 @@
-"""Analytics — raw per-target metrics + pre-aggregated daily rollup."""
+"""Analytics - raw per-target metrics + pre-aggregated daily rollup."""
 
 from __future__ import annotations
 

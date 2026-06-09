@@ -1,4 +1,4 @@
-"""Editable site content / feature flags — the admin's control-plane for the
+"""Editable site content / feature flags - the admin's control-plane for the
 public marketing site. One row per top-level content section (key/value JSON)."""
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 /* ============================================================
-   POSTIT — Global structural rules
+   POSTIT - Global structural rules
    (the bits that used to live in per-page <body> classes / inline
    <style> blocks in the static prototype)
    ============================================================ */
@@ -11,7 +11,7 @@ html {
   overflow-x: hidden;
 }
 
-/* The dashboard is a fixed, full-viewport app — lock body scroll on the
+/* The dashboard is a fixed, full-viewport app - lock body scroll on the
    `/app/*` routes only, scoped via :has() so /, /login, /signup still scroll. */
 html:has(.app-root),
 body:has(.app-root) {

@@ -117,7 +117,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     <form className="auth-form" id={isSignup ? "signupForm" : "loginForm"} noValidate onSubmit={onSubmit}>
       <h1>{isSignup ? "Create your Postit account" : "Welcome back"}</h1>
       <p className="sub">
-        {isSignup ? "Connect your platforms after — takes a minute." : "Pick up where you left off."}
+        {isSignup ? "Connect your platforms after - takes a minute." : "Pick up where you left off."}
       </p>
 
       <div className={"error-banner" + (error ? " show" : "")} id="errorBanner">

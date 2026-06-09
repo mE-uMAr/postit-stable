@@ -7,9 +7,9 @@ import "@/styles/globals.css";
 import "@/styles/enhancements.css";
 
 export const metadata: Metadata = {
-  title: "Postit — Write it once. Postit everywhere.",
+  title: "Postit - Write it once. Postit everywhere.",
   description:
-    "One idea in, nine native posts out. Postit's AI rewrites and reformats your post for every platform — then publishes on your schedule.",
+    "One idea in, nine native posts out. Postit's AI rewrites and reformats your post for every platform - then publishes on your schedule.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

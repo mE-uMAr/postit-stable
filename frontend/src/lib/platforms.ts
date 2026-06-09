@@ -1,5 +1,5 @@
 /* ============================================================
-   Postit — platform catalog + eligibility rules
+   Postit - platform catalog + eligibility rules
    ============================================================ */
 
 import type { Eligibility, EligibilityInput, Platform, PlatformKey } from "./types";
@@ -22,8 +22,8 @@ export const PF: Record<PlatformKey, Platform> = Object.fromEntries(
 ) as Record<PlatformKey, Platform>;
 
 export function eligibility(p: Platform, { hasMedia, hasVideo, charCount }: EligibilityInput): Eligibility {
-  if (p.needsVideo && !hasVideo) return { ok: false, reason: "Needs a video — disabled for this post." };
+  if (p.needsVideo && !hasVideo) return { ok: false, reason: "Needs a video - disabled for this post." };
   if (p.needsMedia && !hasMedia) return { ok: false, reason: "Instagram requires an image or video." };
-  if (p.limit && charCount > p.limit) return { ok: true, warn: `Over ${p.limit} characters — Postit will trim.` };
+  if (p.limit && charCount > p.limit) return { ok: true, warn: `Over ${p.limit} characters - Postit will trim.` };
   return { ok: true };
 }

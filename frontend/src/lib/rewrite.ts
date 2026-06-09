@@ -1,5 +1,5 @@
 /* ============================================================
-   Postit — per-platform rewrite engine (heuristic, no real AI)
+   Postit - per-platform rewrite engine (heuristic, no real AI)
    ============================================================ */
 
 import type { PlatformKey } from "./types";
@@ -27,7 +27,7 @@ export function rewriteFor(key: PlatformKey, text: string, tone: string): string
     case "x":
       return `${t}${tags.length ? "\n\n" + tags.join(" ") : ""}`.slice(0, 270);
     case "linkedin":
-      return `${tone === "Bold" ? "Big news. " : "We're excited to share — "}${t}\n\nWe'd love to hear what you think. 👇`;
+      return `${tone === "Bold" ? "Big news. " : "We're excited to share - "}${t}\n\nWe'd love to hear what you think. 👇`;
     case "instagram":
       return `${t.toLowerCase()}\n\n✨ tap the link in bio to see more →${tags.length ? "\n" + tags.map((x) => x.toLowerCase()).join(" ") : ""}`;
     case "threads":

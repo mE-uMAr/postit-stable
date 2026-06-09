@@ -1,6 +1,6 @@
 """Per-platform rewrite engine (heuristic; ported from the frontend lib).
 
-Deterministic, no external model call — the backend is the source of truth for
+Deterministic, no external model call - the backend is the source of truth for
 generation so the frontend can drop its local copy.
 """
 
@@ -44,7 +44,7 @@ def rewrite_for(platform_id: str, text: str, tone: str) -> str:
         suffix = ("\n\n" + " ".join(tags)) if tags else ""
         return (t + suffix)[:270]
     if platform_id == "linkedin":
-        opener = "Big news. " if tone == "Bold" else "We're excited to share — "
+        opener = "Big news. " if tone == "Bold" else "We're excited to share - "
         return f"{opener}{t}\n\nWe'd love to hear what you think. 👇"
     if platform_id == "instagram":
         tagline = ("\n" + " ".join(x.lower() for x in tags)) if tags else ""

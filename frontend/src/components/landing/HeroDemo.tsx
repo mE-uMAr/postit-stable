@@ -13,18 +13,18 @@ interface DemoVariant {
   cls: string;
   name: string;
   handle: string;
-  /** May contain inline markup (tags, <br>) — rendered as HTML. */
+  /** May contain inline markup (tags, <br>) - rendered as HTML. */
   body: string;
 }
 
 const VARIANTS: DemoVariant[] = [
   {
     pf: "x", cls: "pf-x", name: "X", handle: "@maplehome",
-    body: 'Spring just dropped. 🌷 New collection live now — fresh palettes, lighter layers, zero compromise. <span class="tag">#SpringDrop #NewArrivals</span>',
+    body: 'Spring just dropped. 🌷 New collection live now - fresh palettes, lighter layers, zero compromise. <span class="tag">#SpringDrop #NewArrivals</span>',
   },
   {
     pf: "linkedin", cls: "pf-linkedin", name: "Maple & Co", handle: "Home goods · 1d",
-    body: "We're thrilled to launch our Spring Collection today. Months of design work, lighter materials, and a palette built for longer days — now available to everyone.",
+    body: "We're thrilled to launch our Spring Collection today. Months of design work, lighter materials, and a palette built for longer days - now available to everyone.",
   },
   {
     pf: "instagram", cls: "pf-instagram", name: "maple.home", handle: "Original audio",
@@ -114,7 +114,7 @@ export function HeroDemo() {
         </div>
       </div>
 
-      {/* Always rendered (opacity-toggled) so its row stays reserved — no layout shift. */}
+      {/* Always rendered (opacity-toggled) so its row stays reserved - no layout shift. */}
       <div
         className={"demo-genbar" + (gen.shimmer ? " shimmer" : "")}
         id="genbar"

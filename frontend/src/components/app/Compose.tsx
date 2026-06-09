@@ -33,9 +33,9 @@ function eligibility(
   p: ApiPlatform,
   { hasMedia, hasVideo, charCount }: { hasMedia: boolean; hasVideo: boolean; charCount: number },
 ): Eligibility {
-  if (p.requires_video && !hasVideo) return { ok: false, reason: "Needs a video — disabled for this post." };
+  if (p.requires_video && !hasVideo) return { ok: false, reason: "Needs a video - disabled for this post." };
   if (p.requires_media && !hasMedia) return { ok: false, reason: `${p.name} requires an image or video.` };
-  if (p.char_limit && charCount > p.char_limit) return { ok: true, warn: `Over ${p.char_limit} characters — Postit will trim.` };
+  if (p.char_limit && charCount > p.char_limit) return { ok: true, warn: `Over ${p.char_limit} characters - Postit will trim.` };
   return { ok: true };
 }
 
@@ -250,7 +250,7 @@ export function Compose() {
 
   return (
     <div className="compose-grid">
-      {/* LEFT — composer + selector */}
+      {/* LEFT - composer + selector */}
       <div className="compose-left">
         <div className="composer-card">
           <div className="composer-toolbar">
@@ -343,7 +343,7 @@ export function Compose() {
         </div>
       </div>
 
-      {/* RIGHT — preview grid */}
+      {/* RIGHT - preview grid */}
       <div className="compose-right">
         <div className="preview-head">
           <span className="ttl">

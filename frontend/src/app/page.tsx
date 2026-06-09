@@ -78,11 +78,11 @@ export default function LandingPage() {
             </motion.h1>
             <motion.p className="hero-sub t-body-l" variants={fadeUp}>
               {hero?.subtitle ??
-                "One idea in, nine native posts out. Postit's AI rewrites and reformats your post for every platform — then publishes on your schedule."}
+                "One idea in, nine native posts out. Postit's AI rewrites and reformats your post for every platform - then publishes on your schedule."}
             </motion.p>
             <motion.div className="hero-cta" variants={fadeUp}>
               <Link href={hero?.primary_cta?.href ?? "/signup"} className="btn btn-spark btn-lg">
-                {hero?.primary_cta?.label ?? "Start free — no card needed"}
+                {hero?.primary_cta?.label ?? "Start free - no card needed"}
               </Link>
               <Link href={hero?.secondary_cta?.href ?? "#how"} className="btn btn-ghost btn-lg">
                 <Icon name="compose" size={18} /> {hero?.secondary_cta?.label ?? "See how it works"}
@@ -141,7 +141,7 @@ export default function LandingPage() {
           {[
             { n: "01", v: "compose", t: "Write your idea", d: "Drop one post into a single clean composer." },
             { n: "02", v: "ai", t: "AI makes it native", d: "Postit rewrites tone, length, hashtags and format for each platform." },
-            { n: "03", v: "calendar", t: "Publish or schedule", d: "Post once — it goes live everywhere, or queues for the perfect time." },
+            { n: "03", v: "calendar", t: "Publish or schedule", d: "Post once - it goes live everywhere, or queues for the perfect time." },
           ].map((s) => (
             <motion.div key={s.n} className="step-card" variants={fadeUp}>
               <div className="step-num">{s.n}</div>

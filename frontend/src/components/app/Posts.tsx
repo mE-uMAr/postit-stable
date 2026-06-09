@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { PlatformLogo } from "@/components/PlatformLogo";
+import { useToast } from "./providers/ToastProvider";
+import { useConfirm } from "./providers/ConfirmProvider";
+import { useWorkspace } from "./providers/WorkspaceProvider";
 import { api } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/useApi";
 import type { ApiPost, Paginated, PlatformKey, PostStatus } from "@/lib/api/types";
@@ -46,33 +49,57 @@ function formatDate(iso: string): string {
 }
 
 export function Posts() {
+  const pushToast = useToast();
+  const confirm = useConfirm();
+  const { canEdit } = useWorkspace();
   const [filter, setFilter] = useState<PostStatus | "all">("all");
   const [page] = useState(1);
   const [data, setData] = useState<Paginated<ApiPost> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const qs = new URLSearchParams({ page: String(page), size: "20" });
     if (filter !== "all") qs.set("status", filter);
-    api
-      .get<Paginated<ApiPost>>(`posts?${qs.toString()}`)
-      .then((res) => {
-        if (!cancelled) setData(res);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(errorMessage(e));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      setData(await api.get<Paginated<ApiPost>>(`posts?${qs.toString()}`));
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setLoading(false);
+    }
   }, [filter, page]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const remove = async (post: ApiPost) => {
+    const live = post.status === "scheduled" || post.status === "published";
+    const ok = await confirm({
+      title: "Delete this post?",
+      body: (
+        <>
+          <strong>{post.title || post.body.slice(0, 60)}</strong>
+          {live
+            ? " will be removed from your queue and history. Already-published posts stay live on the platforms; this only removes them from Postit."
+            : " will be permanently deleted. This can't be undone."}
+        </>
+      ),
+      confirmLabel: "Delete post",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.del(`posts/${post.id}`);
+      pushToast("Post deleted");
+      await load();
+    } catch (e) {
+      pushToast(errorMessage(e));
+    }
+  };
 
   const rows = data?.items ?? [];
 
@@ -130,9 +157,18 @@ export function Posts() {
             </div>
             <span className="post-date">{formatDate(r.scheduled_at ?? r.published_at ?? r.created_at)}</span>
             <PostStatusBadge s={r.status} />
-            <button className="icon-btn" style={{ width: 34, height: 34, border: 0 }} title="More">
-              <Icon name="dots" size={18} />
-            </button>
+            {canEdit ? (
+              <button
+                className="icon-btn"
+                style={{ width: 34, height: 34, border: 0, color: "var(--ink-faint)" }}
+                title="Delete post"
+                onClick={() => void remove(r)}
+              >
+                <Icon name="trash" size={17} />
+              </button>
+            ) : (
+              <span />
+            )}
           </div>
         ))}
       </div>

@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/app/providers/ToastProvider";
+import { useConfirm } from "@/components/app/providers/ConfirmProvider";
 import { api } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/useApi";
 import type { AdminUser, Paginated } from "@/lib/api/types";
 
 export default function AdminUsersPage() {
   const pushToast = useToast();
+  const confirm = useConfirm();
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [data, setData] = useState<Paginated<AdminUser> | null>(null);
@@ -52,6 +54,54 @@ export default function AdminUsersPage() {
     }
   };
 
+  // --- confirmed actions ---
+  const toggleActive = async (u: AdminUser) => {
+    if (u.is_active) {
+      const ok = await confirm({
+        title: `Disable ${u.full_name}?`,
+        body: (
+          <>
+            They&apos;ll be signed out and blocked from logging in until re-enabled. Their workspaces
+            and posts are kept.
+          </>
+        ),
+        confirmLabel: "Disable account",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    await update(u.id, { is_active: !u.is_active });
+  };
+
+  const toggleAdmin = async (u: AdminUser) => {
+    const granting = !u.is_superuser;
+    const ok = await confirm({
+      title: granting ? `Make ${u.full_name} an admin?` : `Remove admin from ${u.full_name}?`,
+      body: granting
+        ? "Platform admins get full access to the admin console: every user, workspace, plan, and billing record."
+        : "They'll lose access to the admin console and return to a normal workspace user.",
+      confirmLabel: granting ? "Grant admin" : "Remove admin",
+      danger: !granting,
+    });
+    if (!ok) return;
+    await update(u.id, { is_superuser: !u.is_superuser });
+  };
+
+  const confirmRemove = async (u: AdminUser) => {
+    const ok = await confirm({
+      title: `Delete ${u.full_name}?`,
+      body: (
+        <>
+          This deactivates the account for <strong>{u.email}</strong> and removes them from the
+          platform. This can&apos;t be undone from here.
+        </>
+      ),
+      confirmLabel: "Delete user",
+      danger: true,
+    });
+    if (ok) await remove(u.id);
+  };
+
   const rows = data?.items ?? [];
 
   return (
@@ -59,7 +109,7 @@ export default function AdminUsersPage() {
       <div className="vh">
         <div className="vh-title">
           <h2>Users</h2>
-          <p>{data ? `${data.total} accounts` : "—"}</p>
+          <p>{data ? `${data.total} accounts` : "-"}</p>
         </div>
         <div className="vh-actions">
           <form
@@ -100,13 +150,13 @@ export default function AdminUsersPage() {
               {u.is_superuser ? "Admin" : "User"}
             </span>
             <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => update(u.id, { is_active: !u.is_active })}>
+              <button className="btn btn-ghost btn-sm" onClick={() => void toggleActive(u)}>
                 {u.is_active ? "Disable" : "Enable"}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => update(u.id, { is_superuser: !u.is_superuser })}>
+              <button className="btn btn-ghost btn-sm" onClick={() => void toggleAdmin(u)}>
                 {u.is_superuser ? "Demote" : "Promote"}
               </button>
-              <button className="btn btn-ghost btn-sm" style={{ color: "var(--danger)" }} onClick={() => remove(u.id)}>
+              <button className="btn btn-ghost btn-sm" style={{ color: "var(--danger)" }} onClick={() => void confirmRemove(u)}>
                 Delete
               </button>
             </div>

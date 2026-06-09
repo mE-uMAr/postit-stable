@@ -1,4 +1,4 @@
-"""Publish job — outbox row representing intent to publish a post.
+"""Publish job - outbox row representing intent to publish a post.
 
 No scheduler runs yet; this is the durable contract a future worker drains.
 """

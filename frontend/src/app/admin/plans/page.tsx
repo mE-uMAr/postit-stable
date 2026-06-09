@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Icon } from "@/components/Icon";
 import { useToast } from "@/components/app/providers/ToastProvider";
+import { useConfirm } from "@/components/app/providers/ConfirmProvider";
 import { api } from "@/lib/api/client";
 import { errorMessage, useApi } from "@/lib/api/useApi";
 import type { ApiPlan } from "@/lib/api/types";
@@ -44,6 +45,7 @@ function money(cents: number): string {
 
 export default function AdminPlansPage() {
   const pushToast = useToast();
+  const confirm = useConfirm();
   const { data, loading, reload } = useApi<ApiPlan[]>("admin/plans");
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -97,9 +99,21 @@ export default function AdminPlansPage() {
     }
   };
 
-  const archive = async (id: string) => {
+  const archive = async (p: ApiPlan) => {
+    const ok = await confirm({
+      title: `Archive the ${p.name} plan?`,
+      body: (
+        <>
+          It will be hidden from pricing and can no longer be subscribed to. Existing subscribers on{" "}
+          <strong>{p.name}</strong> keep it until they change plans. You can reactivate it later by editing it.
+        </>
+      ),
+      confirmLabel: "Archive plan",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await api.del(`admin/plans/${id}`);
+      await api.del(`admin/plans/${p.id}`);
       await reload();
       pushToast("Plan archived");
     } catch (e) {
@@ -147,7 +161,7 @@ export default function AdminPlansPage() {
               <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>
                 Edit
               </button>
-              <button className="btn btn-ghost btn-sm" style={{ color: "var(--ink-faint)" }} onClick={() => archive(p.id)}>
+              <button className="btn btn-ghost btn-sm" style={{ color: "var(--ink-faint)" }} onClick={() => void archive(p)}>
                 Archive
               </button>
             </div>

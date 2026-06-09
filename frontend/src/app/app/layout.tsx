@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/app/providers/ThemeProvider";
 import { ToastProvider } from "@/components/app/providers/ToastProvider";
 import { WorkspaceProvider } from "@/components/app/providers/WorkspaceProvider";
+import { ConfirmProvider } from "@/components/app/providers/ConfirmProvider";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
 
@@ -11,7 +12,7 @@ import "@/styles/app.css";
 import "@/styles/app-views.css";
 
 export const metadata: Metadata = {
-  title: "Postit — App",
+  title: "Postit - App",
 };
 
 // Applies the saved theme to <html> before paint to avoid a flash of light mode.
@@ -23,8 +24,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <AuthProvider>
         <WorkspaceProvider>
           <ToastProvider>
-            <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-            <AppShell>{children}</AppShell>
+            <ConfirmProvider>
+              <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+              <AppShell>{children}</AppShell>
+            </ConfirmProvider>
           </ToastProvider>
         </WorkspaceProvider>
       </AuthProvider>

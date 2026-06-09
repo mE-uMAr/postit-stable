@@ -1,22 +1,37 @@
 "use client";
 
 import { useToast } from "@/components/app/providers/ToastProvider";
+import { useConfirm } from "@/components/app/providers/ConfirmProvider";
 import { api } from "@/lib/api/client";
 import { errorMessage, useApi } from "@/lib/api/useApi";
 import type { AdminSubscription, ApiPlan, Paginated } from "@/lib/api/types";
 
 function money(cents: number): string {
-  return cents === 0 ? "—" : "$" + (cents / 100).toFixed(0);
+  return cents === 0 ? "-" : "$" + (cents / 100).toFixed(0);
 }
 
 export default function AdminSubscriptionsPage() {
   const pushToast = useToast();
+  const confirm = useConfirm();
   const subs = useApi<Paginated<AdminSubscription>>("admin/subscriptions?page=1&size=50");
   const plans = useApi<ApiPlan[]>("admin/plans");
 
-  const override = async (subId: string, planId: string) => {
+  const override = async (s: AdminSubscription, planId: string) => {
+    const planName = (plans.data ?? []).find((p) => p.id === planId)?.name ?? "the selected plan";
+    const ok = await confirm({
+      title: `Move ${s.workspace_name} to ${planName}?`,
+      body: (
+        <>
+          This overrides billing for <strong>{s.workspace_name}</strong>, switching them from{" "}
+          <strong>{s.plan_name}</strong> to <strong>{planName}</strong> immediately. The change is
+          recorded in the audit log.
+        </>
+      ),
+      confirmLabel: "Override plan",
+    });
+    if (!ok) return;
     try {
-      await api.post(`admin/subscriptions/${subId}/override`, { plan_id: planId });
+      await api.post(`admin/subscriptions/${s.id}/override`, { plan_id: planId });
       await subs.reload();
       pushToast("Subscription updated");
     } catch (e) {
@@ -31,7 +46,7 @@ export default function AdminSubscriptionsPage() {
       <div className="vh">
         <div className="vh-title">
           <h2>Subscriptions</h2>
-          <p>{subs.data ? `${subs.data.total} workspaces` : "—"}</p>
+          <p>{subs.data ? `${subs.data.total} workspaces` : "-"}</p>
         </div>
       </div>
 
@@ -56,8 +71,8 @@ export default function AdminSubscriptionsPage() {
             <select
               className="input"
               style={{ maxWidth: 160 }}
-              defaultValue=""
-              onChange={(e) => e.target.value && override(s.id, e.target.value)}
+              value=""
+              onChange={(e) => e.target.value && void override(s, e.target.value)}
             >
               <option value="" disabled>
                 Move to…
