@@ -15,11 +15,22 @@ import { useApi } from "@/lib/api/useApi";
 import { fadeUp, revealOnView, staggerContainer } from "@/lib/motion";
 import type { SiteContent } from "@/lib/api/types";
 
+import "@/styles/landing.css";
+
 const PLATFORMS = [
   "facebook", "instagram", "threads", "linkedin", "x", "youtube", "tiktok", "blogger", "wordpress",
 ] as const;
 
-const FEATURE_VARIANTS = ["compose", "ai", "calendar", "connections"] as const;
+// Map a feature's icon (from the site CMS) to a category label + product-mock visual,
+// so the badge and illustration always match the feature's meaning.
+const FEATURE_META: Record<string, { tag: string; variant: "compose" | "ai" | "calendar" | "connections" }> = {
+  compose: { tag: "Compose", variant: "compose" },
+  calendar: { tag: "Schedule", variant: "calendar" },
+  analytics: { tag: "Analytics", variant: "ai" },
+  shield: { tag: "Brand voice", variant: "ai" },
+  connections: { tag: "Connections", variant: "connections" },
+};
+const featureMeta = (icon: string) => FEATURE_META[icon] ?? { tag: "Feature", variant: "compose" as const };
 
 export default function LandingPage() {
   const { data } = useApi<SiteContent>("site/content");
@@ -134,7 +145,10 @@ export default function LandingPage() {
           ].map((s) => (
             <motion.div key={s.n} className="step-card" variants={fadeUp}>
               <div className="step-num">{s.n}</div>
-              <div className="step-illus" style={{ padding: 0, background: "none" }}>
+              <div
+                className="step-illus"
+                style={{ height: "auto", padding: 0, background: "none", marginBottom: 20 }}
+              >
                 <ProductMock variant={s.v as "compose"} />
               </div>
               <h3 className="t-h3">{s.t}</h3>
@@ -155,13 +169,17 @@ export default function LandingPage() {
           >
             <motion.div className="feat-text" variants={fadeUp}>
               <span className="badge badge-spark">
-                <span className="badge-dot" /> {f.title}
+                <span className="badge-dot" /> {featureMeta(f.icon).tag}
               </span>
               <h3>{f.title}</h3>
               <p>{f.body}</p>
             </motion.div>
-            <motion.div className="feat-shot" style={{ background: "none", padding: 0 }} variants={fadeUp}>
-              <ProductMock variant={FEATURE_VARIANTS[i % FEATURE_VARIANTS.length]} />
+            <motion.div
+              className="feat-shot"
+              style={{ height: "auto", padding: 0, background: "none", border: "none", boxShadow: "none" }}
+              variants={fadeUp}
+            >
+              <ProductMock variant={featureMeta(f.icon).variant} />
             </motion.div>
           </motion.div>
         ))}
