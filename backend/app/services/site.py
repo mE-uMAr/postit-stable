@@ -86,6 +86,20 @@ DEFAULT_CONTENT: dict = {
         "social_auth": False,   # Google/Apple buttons on auth pages
         "show_pricing": True,
     },
+    # Pricing model is admin-controlled: "plan" (subscription tiers from /subscriptions/plans)
+    # or "usage" (pay-as-you-go rates below). Rates are in cents.
+    "pricing": {
+        "model": "plan",          # "plan" | "usage"
+        "currency": "USD",
+        "headline": "Start free. Upgrade when it pays for itself.",
+        "subhead": "Simple pricing that scales with how much you publish.",
+        "rates": {
+            "per_post_cents": 25,            # each scheduled/published post
+            "per_ai_generation_cents": 10,   # each AI rewrite/generation
+            "per_manual_post_cents": 5,      # manual post creation + media upload
+        },
+        "usage_note": "No subscription. You only pay for what you publish, billed monthly.",
+    },
 }
 
 # Sections a superuser may edit through the admin API.

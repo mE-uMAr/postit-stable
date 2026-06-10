@@ -301,6 +301,19 @@ export interface SiteCta {
   href: string;
 }
 
+export interface PricingConfig {
+  model: "plan" | "usage";
+  currency: string;
+  headline: string;
+  subhead: string;
+  rates: {
+    per_post_cents: number;
+    per_ai_generation_cents: number;
+    per_manual_post_cents: number;
+  };
+  usage_note: string;
+}
+
 export interface SiteContent {
   announcement: { enabled: boolean; text: string; href?: string };
   hero: {
@@ -315,4 +328,5 @@ export interface SiteContent {
   testimonials: { quote: string; name: string; role: string }[];
   faq: { q: string; a: string }[];
   flags: { social_auth: boolean; show_pricing: boolean };
+  pricing: PricingConfig;
 }
