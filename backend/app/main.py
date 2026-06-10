@@ -90,7 +90,12 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def rate_limit(request: Request, call_next):  # noqa: ANN001
         path = request.url.path
-        if not settings.RATE_LIMIT_ENABLED or path.startswith(("/healthz", "/readyz")) or path.endswith("/webhook"):
+        if (
+            not settings.RATE_LIMIT_ENABLED
+            or path.startswith(("/healthz", "/readyz"))
+            or path.endswith("/webhook")
+            or "/webhooks/" in path
+        ):
             return await call_next(request)
         client = request.client.host if request.client else "anon"
         allowed, remaining = await check_rate_limit(f"{client}:{path}")

@@ -148,6 +148,27 @@
 .pm-row:last-child { border-bottom: none; }
 .pm-status { margin-left: auto; width: 8px; height: 8px; border-radius: 999px; background: var(--success); }
 
+/* ---- Admin: platform OAuth callback URLs ---- */
+.cb-block { margin-top: 14px; border-top: 1px solid var(--hairline); padding-top: 12px; display: grid; gap: 8px; }
+.cb-row { display: grid; gap: 3px; }
+.cb-row > .cb-label {
+  font: 600 10.5px var(--font-ui); text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint);
+}
+.cb-copy {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-sunken); border: 1px solid var(--hairline);
+  border-radius: 8px; padding: 6px 8px; cursor: pointer; text-align: left; width: 100%;
+}
+.cb-copy:hover { border-color: var(--ai); }
+.cb-copy code {
+  font: 500 11.5px var(--font-mono); color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+}
+.cb-copy .cb-ic { color: var(--ink-faint); flex: none; }
+.cb-status { display: inline-flex; align-items: center; gap: 6px; font: 600 11px var(--font-ui); }
+.cb-status.on { color: var(--success); }
+.cb-status.off { color: var(--ink-faint); }
+
 /* ---- Role / empty states ---- */
 .role-badge {
   display: inline-block; padding: 2px 9px; border-radius: 999px;
