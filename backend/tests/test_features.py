@@ -102,6 +102,42 @@ async def test_ai_defaults_to_mock_provider():
     assert ai_service.enabled is False
 
 
+# -------------------------------------------------------- platform webhooks ----
+@pytest.mark.asyncio
+async def test_webhook_verification_handshake(client):
+    from app.core.config import settings
+
+    ok = await client.get(
+        "/api/v1/webhooks/threads/deauthorize",
+        params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": settings.OAUTH_WEBHOOK_VERIFY_TOKEN,
+            "hub.challenge": "CH123",
+        },
+    )
+    assert ok.status_code == 200 and ok.text == "CH123"
+
+    bad = await client.get(
+        "/api/v1/webhooks/threads/deauthorize",
+        params={"hub.mode": "subscribe", "hub.verify_token": "nope", "hub.challenge": "x"},
+    )
+    assert bad.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_webhook_deauthorize_and_delete(client):
+    deauth = await client.post("/api/v1/webhooks/threads/deauthorize", json={"user_id": "123"})
+    assert deauth.status_code == 200 and deauth.json()["success"] is True
+
+    delete = await client.post("/api/v1/webhooks/facebook/delete", json={"user_id": "123"})
+    assert delete.status_code == 200
+    body = delete.json()
+    assert body["confirmation_code"] and body["url"].endswith(body["confirmation_code"])
+
+    unknown = await client.post("/api/v1/webhooks/madeup/deauthorize", json={})
+    assert unknown.status_code == 404
+
+
 # ----------------------------------------------------------- error log view ----
 @pytest.mark.asyncio
 async def test_admin_error_log_lists_entries(client, unique_email):

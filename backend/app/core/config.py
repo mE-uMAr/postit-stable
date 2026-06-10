@@ -8,6 +8,20 @@ from typing import Annotated
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+# Every platform Postit can connect to. Drives the OAuth credential lookup and the
+# redirect / deauthorize / delete callback URLs exposed to each provider console.
+OAUTH_PLATFORMS: tuple[str, ...] = (
+    "x",
+    "linkedin",
+    "instagram",
+    "threads",
+    "facebook",
+    "tiktok",
+    "youtube",
+    "wordpress",
+    "blogger",
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -75,6 +89,32 @@ class Settings(BaseSettings):
     PADDLE_ENVIRONMENT: str = "sandbox"        # sandbox | production
     PADDLE_CURRENCY: str = "USD"
 
+    # ---- Social OAuth (per-platform apps) ----
+    # PUBLIC_API_URL is the externally reachable base of this API (no trailing slash).
+    # All callback URLs handed to the platform consoles are built from it.
+    PUBLIC_API_URL: str = "http://localhost:8000"
+    # Shared verify token for the Meta-style webhook GET handshake (Threads/Facebook/Instagram).
+    OAUTH_WEBHOOK_VERIFY_TOKEN: str = "change-me-verify-token"
+
+    X_CLIENT_ID: str | None = None
+    X_CLIENT_SECRET: str | None = None
+    LINKEDIN_CLIENT_ID: str | None = None
+    LINKEDIN_CLIENT_SECRET: str | None = None
+    INSTAGRAM_CLIENT_ID: str | None = None
+    INSTAGRAM_CLIENT_SECRET: str | None = None
+    THREADS_CLIENT_ID: str | None = None
+    THREADS_CLIENT_SECRET: str | None = None
+    FACEBOOK_CLIENT_ID: str | None = None
+    FACEBOOK_CLIENT_SECRET: str | None = None
+    TIKTOK_CLIENT_ID: str | None = None
+    TIKTOK_CLIENT_SECRET: str | None = None
+    YOUTUBE_CLIENT_ID: str | None = None
+    YOUTUBE_CLIENT_SECRET: str | None = None
+    WORDPRESS_CLIENT_ID: str | None = None
+    WORDPRESS_CLIENT_SECRET: str | None = None
+    BLOGGER_CLIENT_ID: str | None = None
+    BLOGGER_CLIENT_SECRET: str | None = None
+
     # ---- Seed ----
     SEED_SUPERADMIN_EMAIL: str = "admin@postit.app"
     SEED_SUPERADMIN_PASSWORD: str = "admin12345"
@@ -107,6 +147,46 @@ class Settings(BaseSettings):
             if self.PADDLE_ENVIRONMENT.lower() == "production"
             else "https://sandbox-api.paddle.com"
         )
+
+    # ---- Social OAuth helpers ----
+    @property
+    def _api_base(self) -> str:
+        return f"{self.PUBLIC_API_URL.rstrip('/')}{self.API_V1_PREFIX}"
+
+    def oauth_redirect_uri(self, platform_id: str) -> str:
+        """The OAuth redirect / callback URL to register for a platform."""
+        return f"{self._api_base}/connections/{platform_id}/callback"
+
+    def oauth_deauthorize_url(self, platform_id: str) -> str:
+        """Uninstall / deauthorize callback (pinged when a user removes the app)."""
+        return f"{self._api_base}/webhooks/{platform_id}/deauthorize"
+
+    def oauth_delete_url(self, platform_id: str) -> str:
+        """Data-deletion request callback (GDPR / Meta data deletion)."""
+        return f"{self._api_base}/webhooks/{platform_id}/delete"
+
+    def platform_credentials(self, platform_id: str) -> tuple[str | None, str | None]:
+        key = platform_id.upper()
+        return (
+            getattr(self, f"{key}_CLIENT_ID", None),
+            getattr(self, f"{key}_CLIENT_SECRET", None),
+        )
+
+    def oauth_configured(self, platform_id: str) -> bool:
+        client_id, client_secret = self.platform_credentials(platform_id)
+        return bool(client_id and client_secret)
+
+    def platform_oauth_config(self, platform_id: str) -> dict:
+        """Everything needed to wire one platform's developer console + status."""
+        client_id, _ = self.platform_credentials(platform_id)
+        return {
+            "platform_id": platform_id,
+            "configured": self.oauth_configured(platform_id),
+            "client_id": client_id,
+            "redirect_callback_url": self.oauth_redirect_uri(platform_id),
+            "deauthorize_callback_url": self.oauth_deauthorize_url(platform_id),
+            "delete_callback_url": self.oauth_delete_url(platform_id),
+        }
 
 
 @lru_cache

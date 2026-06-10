@@ -279,6 +279,22 @@ export interface BestTime {
   reason: string;
 }
 
+/* ---- Platform OAuth integration config (admin) ---- */
+export interface PlatformIntegration {
+  platform_id: string;
+  configured: boolean;
+  client_id: string | null;
+  redirect_callback_url: string;
+  deauthorize_callback_url: string;
+  delete_callback_url: string;
+}
+
+export interface IntegrationsResponse {
+  public_api_url: string;
+  webhook_verify_token: string;
+  platforms: PlatformIntegration[];
+}
+
 /* ---- Site content (admin-editable marketing site) ---- */
 export interface SiteCta {
   label: string;

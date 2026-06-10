@@ -17,6 +17,7 @@ from app.api.v1.routes import (
     site,
     subscriptions,
     users,
+    webhooks,
     workspaces,
 )
 from app.api.v1.routes.admin import admin_router
@@ -36,4 +37,5 @@ api_router.include_router(billing.router)
 api_router.include_router(notifications.router)
 api_router.include_router(brand_voice.router)
 api_router.include_router(site.router)
+api_router.include_router(webhooks.router)
 api_router.include_router(admin_router)

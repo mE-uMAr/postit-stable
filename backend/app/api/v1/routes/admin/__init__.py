@@ -9,6 +9,7 @@ from app.api.v1.routes.admin import (
     analytics,
     audit,
     errors,
+    integrations,
     plans,
     platforms,
     site,
@@ -32,3 +33,4 @@ admin_router.include_router(platforms.router)
 admin_router.include_router(audit.router)
 admin_router.include_router(errors.router)
 admin_router.include_router(site.router)
+admin_router.include_router(integrations.router)

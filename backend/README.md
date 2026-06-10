@@ -87,6 +87,22 @@ and publishes via `services/publish.py`, with bounded retries + backoff. Toggle 
 `SCHEDULER_ENABLED`. **When running multiple web workers, enable it on exactly one** (or run a
 dedicated process) to avoid double-processing.
 
+## Social OAuth callbacks
+Each platform's OAuth app needs a redirect URL plus (for Meta: Threads/Facebook/Instagram)
+deauthorize and data-deletion callbacks. Set `PUBLIC_API_URL` and per-platform
+`{PLATFORM}_CLIENT_ID/SECRET` in `.env`; the callback URLs are then:
+
+```
+Redirect:     {PUBLIC_API_URL}/api/v1/connections/{platform}/callback
+Deauthorize:  {PUBLIC_API_URL}/api/v1/webhooks/{platform}/deauthorize
+Delete:       {PUBLIC_API_URL}/api/v1/webhooks/{platform}/delete
+```
+
+The deauthorize/delete endpoints verify the Meta `signed_request`, revoke the matching
+connection, audit-log the event, and (for delete) return the `{url, confirmation_code}`
+Meta requires. A superuser can copy every platform's URLs from the admin **Platforms** page
+or `GET /api/v1/admin/integrations`. `OAUTH_WEBHOOK_VERIFY_TOKEN` backs the GET handshake.
+
 ## Site CMS + error logging
 - Superusers edit the public marketing site (hero, features, testimonials, FAQ, pricing toggle,
   flags) via `GET/PUT /api/v1/admin/site`; the landing reads `GET /api/v1/site/content` (cached).
