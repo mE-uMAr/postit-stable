@@ -230,7 +230,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {isSignup ? (
         <>
           <p className="fineprint">
-            By continuing you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy</a>.
+            By continuing you agree to our <Link href="/terms">Terms</Link> &amp;{" "}
+            <Link href="/privacy">Privacy</Link>.
           </p>
           <p className="auth-switch">
             Already have an account? <Link href="/login">Log in</Link>

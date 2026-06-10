@@ -21,10 +21,9 @@ export function LandingNav() {
           <span className="wm-corner" />
         </Link>
         <div className="nav-links">
-          <a href="#features">Features</a>
-          <a href="#platforms">Platforms</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#">Blog</a>
+          <Link href="/#features">Features</Link>
+          <Link href="/#how">How it works</Link>
+          <Link href="/pricing">Pricing</Link>
         </div>
         <div className="nav-right">
           <Link href="/login" className="btn btn-ghost btn-sm">

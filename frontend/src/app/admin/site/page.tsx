@@ -278,6 +278,114 @@ export default function AdminSitePage() {
           )}
         />
 
+        {/* Pricing model */}
+        <section className="cms-card">
+          <h3>Pricing</h3>
+          <p className="hint">Choose how customers pay. Rates apply to the usage-based model.</p>
+          <div className="cms-row">
+            <div className="cms-field">
+              <label>Model</label>
+              <select
+                className="input"
+                value={c.pricing.model}
+                onChange={(e) =>
+                  setC({ ...c, pricing: { ...c.pricing, model: e.target.value as "plan" | "usage" } })
+                }
+              >
+                <option value="plan">Plan-based (subscription tiers)</option>
+                <option value="usage">Usage-based (pay per use)</option>
+              </select>
+            </div>
+            <div className="cms-field">
+              <label>Currency</label>
+              <input
+                className="input"
+                value={c.pricing.currency}
+                onChange={(e) => setC({ ...c, pricing: { ...c.pricing, currency: e.target.value } })}
+              />
+            </div>
+          </div>
+          <div className="cms-field">
+            <label>Headline</label>
+            <input
+              className="input"
+              value={c.pricing.headline}
+              onChange={(e) => setC({ ...c, pricing: { ...c.pricing, headline: e.target.value } })}
+            />
+          </div>
+          <div className="cms-field">
+            <label>Subhead</label>
+            <input
+              className="input"
+              value={c.pricing.subhead}
+              onChange={(e) => setC({ ...c, pricing: { ...c.pricing, subhead: e.target.value } })}
+            />
+          </div>
+
+          {c.pricing.model === "usage" && (
+            <>
+              <div className="cms-row">
+                <div className="cms-field">
+                  <label>Per published post (cents)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    value={c.pricing.rates.per_post_cents}
+                    onChange={(e) =>
+                      setC({
+                        ...c,
+                        pricing: { ...c.pricing, rates: { ...c.pricing.rates, per_post_cents: Number(e.target.value) } },
+                      })
+                    }
+                  />
+                </div>
+                <div className="cms-field">
+                  <label>Per AI generation (cents)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    value={c.pricing.rates.per_ai_generation_cents}
+                    onChange={(e) =>
+                      setC({
+                        ...c,
+                        pricing: {
+                          ...c.pricing,
+                          rates: { ...c.pricing.rates, per_ai_generation_cents: Number(e.target.value) },
+                        },
+                      })
+                    }
+                  />
+                </div>
+                <div className="cms-field">
+                  <label>Per manual post (cents)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    value={c.pricing.rates.per_manual_post_cents}
+                    onChange={(e) =>
+                      setC({
+                        ...c,
+                        pricing: {
+                          ...c.pricing,
+                          rates: { ...c.pricing.rates, per_manual_post_cents: Number(e.target.value) },
+                        },
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="cms-field">
+                <label>Usage note</label>
+                <input
+                  className="input"
+                  value={c.pricing.usage_note}
+                  onChange={(e) => setC({ ...c, pricing: { ...c.pricing, usage_note: e.target.value } })}
+                />
+              </div>
+            </>
+          )}
+        </section>
+
         {/* Flags */}
         <section className="cms-card">
           <h3>Feature flags</h3>

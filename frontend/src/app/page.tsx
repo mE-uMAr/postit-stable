@@ -6,8 +6,9 @@ import { motion } from "framer-motion";
 
 import { LandingIconSprite } from "@/components/landing/LandingIconSprite";
 import { LandingNav } from "@/components/landing/LandingNav";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 import { HeroDemo } from "@/components/landing/HeroDemo";
-import { PricingTable } from "@/components/landing/PricingTable";
+import { PricingContent } from "@/components/landing/PricingContent";
 import { ProductMock } from "@/components/landing/ProductMock";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { Icon } from "@/components/Icon";
@@ -234,7 +235,7 @@ export default function LandingPage() {
       )}
 
       {/* ===== Pricing ===== */}
-      {showPricing && <PricingTable />}
+      {showPricing && <PricingContent />}
 
       {/* ===== FAQ ===== */}
       {faq.length > 0 && (
@@ -276,38 +277,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== Footer ===== */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-cols">
-            <div className="footer-brand">
-              <Link href="/" className="wordmark" style={{ fontSize: 22 }}>
-                <span className="wm-text">Postit</span>
-                <span className="wm-corner" />
-              </Link>
-              <p className="tagline">Write once. Post everywhere. Sound native on each.</p>
-            </div>
-            <div className="footer-col">
-              <h4>Product</h4>
-              <a href="#features">Features</a>
-              <a href="#pricing">Pricing</a>
-              <Link href="/app">Open app</Link>
-            </div>
-            <div className="footer-col">
-              <h4>Platforms</h4>
-              <a href="#how">How it works</a>
-            </div>
-            <div className="footer-col">
-              <h4>Company</h4>
-              <Link href="/login">Log in</Link>
-              <Link href="/signup">Sign up</Link>
-            </div>
-          </div>
-          <div className="footer-legal">
-            <span>© {new Date().getFullYear()} Postit, Inc.</span>
-            <span className="spacer" />
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </>
   );
 }
