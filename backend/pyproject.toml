@@ -17,3 +17,8 @@ ignore = ["B008"]  # FastAPI Depends() in defaults is idiomatic
 asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
+
+# --- ADDED TO FIX BUILD ERROR ---
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["alembic*"]
