@@ -47,6 +47,31 @@ docker compose up --build      # mysql:8 + redis:7 + api (runs migrate + seed)
 
 Set `DATABASE_URL=mysql+aiomysql://user:pass@host:3306/postit?charset=utf8mb4`.
 
+## Deploy to FastAPI Cloud
+Pushes to `main` that touch `backend/**` are deployed by
+[`.github/workflows/deploy-backend.yml`](../.github/workflows/deploy-backend.yml)
+(also runnable from the Actions tab via *workflow_dispatch*). One-time setup, from this
+directory:
+
+```bash
+uv tool install fastapi-cloud-cli     # or: pip install fastapi-cloud-cli
+fastapi login                          # authenticate
+fastapi deploy                         # first run creates + links the app
+fastapi cloud setup-ci --secrets-only  # provisions a deploy token + sets the repo secrets
+```
+
+That sets the two GitHub Actions secrets the workflow needs (or add them manually under
+*Settings -> Secrets and variables -> Actions*):
+
+| Secret                 | Value                                            |
+| ---------------------- | ------------------------------------------------ |
+| `FASTAPI_CLOUD_TOKEN`  | deploy token (`fastapi cloud tokens create`)     |
+| `FASTAPI_CLOUD_APP_ID` | app id printed by the first `fastapi deploy`      |
+
+The deploy archive respects `.gitignore`, so `.env`, `.venv/`, and `*.db` stay local.
+FastAPI Cloud installs from `requirements.txt`; declare any build deps there (this project's
+`pyproject.toml` is metadata-only).
+
 ## Paddle Billing (sandbox)
 Billing endpoints return `503` until you set a Paddle API key. Create a free sandbox at
 `sandbox-vendors.paddle.com` and, in `.env`:
