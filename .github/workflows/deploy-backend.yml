@@ -1,0 +1,46 @@
+# Deploy the FastAPI backend (./backend) to FastAPI Cloud on every push to main.
+#
+# This mirrors the workflow `fastapi cloud setup-ci` generates, adapted for this
+# repo: the app lives in ./backend, and since the repo isn't uv-managed we install
+# the CLI explicitly with `uvx` instead of `uv run`.
+#
+# One-time setup (run locally from ./backend, then never again):
+#   uv tool install fastapi-cloud-cli      # or: pip install fastapi-cloud-cli
+#   fastapi login                          # authenticate to FastAPI Cloud
+#   fastapi deploy                         # creates + links the app on first run
+#   fastapi cloud setup-ci --secrets-only  # provisions a deploy token and sets the
+#                                          # two secrets below via the gh CLI
+#
+# ...or set these GitHub Actions secrets manually
+# (Settings -> Secrets and variables -> Actions):
+#   FASTAPI_CLOUD_TOKEN   deploy token  (`fastapi cloud tokens create`)
+#   FASTAPI_CLOUD_APP_ID  app id from the first `fastapi deploy`
+name: Deploy backend to FastAPI Cloud
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+# Never let two deploys of the same app overlap; queue them instead.
+concurrency:
+  group: fastapi-cloud-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - name: Deploy to FastAPI Cloud
+        run: uvx --from fastapi-cli --with fastapi-cloud-cli fastapi deploy
+        env:
+          FASTAPI_CLOUD_TOKEN: ${{ secrets.FASTAPI_CLOUD_TOKEN }}
+          FASTAPI_CLOUD_APP_ID: ${{ secrets.FASTAPI_CLOUD_APP_ID }}
