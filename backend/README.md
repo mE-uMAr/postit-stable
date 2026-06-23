@@ -54,7 +54,7 @@ Pushes to `main` that touch `backend/**` are deployed by
 directory:
 
 ```bash
-uv tool install fastapi-cloud-cli     # or: pip install fastapi-cloud-cli
+uv tool install "fastapi[standard]"    # or: pip install "fastapi[standard]"
 fastapi login                          # authenticate
 fastapi deploy                         # first run creates + links the app
 fastapi cloud setup-ci --secrets-only  # provisions a deploy token + sets the repo secrets

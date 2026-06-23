@@ -5,7 +5,7 @@
 # the CLI explicitly with `uvx` instead of `uv run`.
 #
 # One-time setup (run locally from ./backend, then never again):
-#   uv tool install fastapi-cloud-cli      # or: pip install fastapi-cloud-cli
+#   uv tool install "fastapi[standard]"    # or: pip install "fastapi[standard]"
 #   fastapi login                          # authenticate to FastAPI Cloud
 #   fastapi deploy                         # creates + links the app on first run
 #   fastapi cloud setup-ci --secrets-only  # provisions a deploy token and sets the
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
       - name: Deploy to FastAPI Cloud
-        run: uvx --from fastapi-cli --with fastapi-cloud-cli fastapi deploy
+        run: uvx --from "fastapi[standard]" --with fastapi-cloud-cli fastapi deploy
         env:
           FASTAPI_CLOUD_TOKEN: ${{ secrets.FASTAPI_CLOUD_TOKEN }}
           FASTAPI_CLOUD_APP_ID: ${{ secrets.FASTAPI_CLOUD_APP_ID }}
