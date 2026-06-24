@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { api } from "@/lib/api/client";
@@ -45,6 +45,20 @@ export function Connections() {
   const connectedCount = (connections.data ?? []).filter((c) => c.status === "connected").length;
   const totalCount = (platforms.data ?? []).length;
 
+  // Surface the result of an OAuth round-trip (callback redirects back here).
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const connected = sp.get("connected");
+    const err = sp.get("error");
+    const platform = sp.get("platform") ?? "Account";
+    if (!connected && !err) return;
+    if (connected) pushToast(`${platform} connected`);
+    else pushToast(`Couldn't connect ${platform}: ${err}`);
+    window.history.replaceState({}, "", "/app/connections");
+    void connections.reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const act = async (platformId: string, action: "connect" | "disconnect" | "reconnect", name: string) => {
     if (action === "disconnect") {
       const ok = await confirm({
@@ -59,17 +73,27 @@ export function Connections() {
         danger: true,
       });
       if (!ok) return;
+      setBusy(platformId + action);
+      try {
+        await api.post(`connections/${platformId}/disconnect`, {});
+        await connections.reload();
+        pushToast(`${name} disconnected`);
+      } catch (e) {
+        pushToast(errorMessage(e));
+      } finally {
+        setBusy(null);
+      }
+      return;
     }
+    // connect / reconnect → start real OAuth: fetch the consent URL and go there.
     setBusy(platformId + action);
     try {
-      await api.post(`connections/${platformId}/${action}`, {});
-      await connections.reload();
-      pushToast(
-        action === "disconnect" ? `${name} disconnected` : `${name} ${action === "reconnect" ? "reconnected" : "connected"}`,
+      const { authorize_url } = await api.post<{ authorize_url: string }>(
+        `connections/${platformId}/${action}`,
       );
+      window.location.href = authorize_url;
     } catch (e) {
       pushToast(errorMessage(e));
-    } finally {
       setBusy(null);
     }
   };

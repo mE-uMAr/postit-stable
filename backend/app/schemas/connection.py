@@ -23,9 +23,7 @@ class ConnectionRead(ORMModel):
     created_at: datetime
 
 
-class ConnectionConnect(BaseModel):
-    """Mock OAuth connect - real flow would exchange a provider code."""
+class AuthorizeResponse(BaseModel):
+    """The platform consent URL the client should redirect the browser to."""
 
-    handle: str | None = None
-    display_name: str | None = None
-    external_account_id: str | None = None
+    authorize_url: str

@@ -1,8 +1,9 @@
 """Publishing pipeline shared by immediate publish and the scheduled worker.
 
-In this build the platform calls are mocked (no live social APIs), but the
-lifecycle is real: targets transition to ``published`` with an external id, the
-post status is rolled up, usage is recorded, and the author is notified.
+Each target is published to the live platform API using the workspace's stored
+(encrypted) OAuth token. Targets transition to ``published`` with the real
+external post id, the post status is rolled up, usage is recorded, and the
+author is notified.
 """
 
 from __future__ import annotations
@@ -12,31 +13,51 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ValidationError_
-from app.core.security import generate_opaque_token
+from app.core.security import decrypt_secret
 from app.models.enums import ConnectionStatus, NotificationType, PostStatus, TargetStatus
 from app.models.notification import Notification
 from app.models.post import Post, PostTarget
 from app.repositories.platform import ConnectionRepository
 from app.repositories.post import PostTargetRepository
 from app.services import usage as usage_service
+from app.services.oauth import get_oauth_provider, oauth_supported
+from app.services.oauth.base import OAuthError
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def _publish_target(db: AsyncSession, target: PostTarget) -> bool:
-    """Publish a single target (mock). Returns True on success."""
+async def _publish_target(db: AsyncSession, target: PostTarget, post: Post) -> bool:
+    """Publish a single target to its live platform. Returns True on success.
+
+    Raises on any failure so the caller marks just this target failed.
+    """
     conn = None
     if target.connection_id is not None:
         conn = await ConnectionRepository(db).get(target.connection_id)
-    # Skip platforms that aren't connected rather than hard-failing the whole post.
-    if conn is not None and conn.status != ConnectionStatus.connected:
-        conn = None
+    if conn is None or conn.status != ConnectionStatus.connected:
+        raise OAuthError("Account isn't connected for this platform — connect it and retry.")
+    if not oauth_supported(target.platform_id):
+        raise OAuthError(f"{target.platform_id} publishing isn't available.")
 
+    provider = get_oauth_provider(target.platform_id)
+    if not provider.can_publish_text:
+        raise OAuthError(provider.unsupported_reason)
+
+    access_token = decrypt_secret(conn.access_token)
+    if not access_token:
+        raise OAuthError("Stored credentials are missing or invalid — reconnect the account.")
+
+    external_id = await provider.publish_text(
+        access_token=access_token,
+        external_account_id=conn.external_account_id,
+        text=target.content,
+        title=post.title,
+    )
     target.status = TargetStatus.published
     target.published_at = _now()
-    target.external_post_id = "mock_" + generate_opaque_token(8)
+    target.external_post_id = external_id
     target.error = None
     return True
 
@@ -55,7 +76,7 @@ async def publish_post(db: AsyncSession, post: Post) -> Post:
             published += 1
             continue
         try:
-            ok = await _publish_target(db, t)
+            ok = await _publish_target(db, t, post)
             published += 1 if ok else 0
             failed += 0 if ok else 1
         except Exception as exc:  # pragma: no cover - defensive; a target never blocks the rest
