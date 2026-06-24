@@ -49,7 +49,11 @@ def _do_run_migrations(connection) -> None:  # noqa: ANN001
 
 
 async def run_migrations_online() -> None:
-    engine = create_async_engine(settings.DATABASE_URL, poolclass=None)
+    from app.core.database import ssl_connect_args
+
+    engine = create_async_engine(
+        settings.DATABASE_URL, poolclass=None, connect_args=ssl_connect_args()
+    )
     async with engine.connect() as connection:
         await connection.run_sync(_do_run_migrations)
     await engine.dispose()

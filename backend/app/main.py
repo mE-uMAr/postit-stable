@@ -13,6 +13,7 @@ from fastapi.responses import ORJSONResponse
 
 from app.api.v1.router import api_router
 from app.api.v1.routes import health
+from app.core.bootstrap import bootstrap_database
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import logger, setup_logging
@@ -54,6 +55,8 @@ async def lifespan(app: FastAPI):
     setup_logging()
     await init_kv()
     _warn_on_insecure_production_config()
+    # Apply migrations (+ core seed) before serving, when enabled for this deploy.
+    await bootstrap_database()
     logger.info("Starting %s (%s)", settings.PROJECT_NAME, settings.ENVIRONMENT)
 
     stop = asyncio.Event()

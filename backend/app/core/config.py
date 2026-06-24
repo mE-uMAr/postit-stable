@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_RECYCLE: int = 1800
+    # TLS for MySQL. None = auto (on for remote hosts, off for localhost). Set a CA
+    # bundle path to additionally verify the server cert (ssl-mode=VERIFY_CA).
+    DB_SSL: bool | None = None
+    DB_SSL_CA: str | None = None
 
     # ---- Redis ----
     REDIS_URL: str | None = None
@@ -67,6 +71,10 @@ class Settings(BaseSettings):
     # ---- Rate limiting ----
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 120
+
+    # ---- Startup bootstrap (deploy) ----
+    RUN_MIGRATIONS_ON_STARTUP: bool = False  # run `alembic upgrade head` on boot
+    RUN_SEED_ON_STARTUP: bool = False        # run the idempotent core seed on boot
 
     # ---- Scheduler / publish worker ----
     SCHEDULER_ENABLED: bool = True          # run the in-process publish worker
