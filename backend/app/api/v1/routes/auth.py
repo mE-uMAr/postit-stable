@@ -16,6 +16,9 @@ from app.schemas.auth import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     LoginRequest,
+    OtpResendRequest,
+    OtpVerifyRequest,
+    RegisterPendingResponse,
     RegisterRequest,
     ResetPasswordRequest,
 )
@@ -28,7 +31,9 @@ from app.services.audit import record_audit
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=RegisterPendingResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(payload: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
     meta = client_meta(request)
     user = await auth_service.register(
@@ -38,9 +43,24 @@ async def register(payload: RegisterRequest, request: Request, db: AsyncSession 
         password=payload.password,
         workspace_name=payload.workspace_name,
     )
-    tokens = await auth_service.issue_tokens(db, user, user_agent=meta["user_agent"], ip=meta["ip"])
+    await auth_service.send_signup_otp(db, user)
     await record_audit(db, action="user.registered", actor_id=user.id, **meta)
+    return RegisterPendingResponse(email=user.email)
+
+
+@router.post("/verify-otp", response_model=AuthResponse)
+async def verify_otp(payload: OtpVerifyRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    meta = client_meta(request)
+    user = await auth_service.verify_signup(db, email=payload.email, code=payload.code)
+    tokens = await auth_service.issue_tokens(db, user, user_agent=meta["user_agent"], ip=meta["ip"])
+    await record_audit(db, action="user.verified", actor_id=user.id, **meta)
     return AuthResponse(user=UserRead.model_validate(user), tokens=tokens)
+
+
+@router.post("/resend-otp", response_model=Message)
+async def resend_otp(payload: OtpResendRequest, db: AsyncSession = Depends(get_db)):
+    await auth_service.resend_signup_otp(db, email=payload.email)
+    return Message(message="If that account needs verification, a new code is on the way.")
 
 
 @router.post("/login", response_model=AuthResponse)

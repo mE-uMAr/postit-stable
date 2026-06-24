@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { API_V1 } from "@/lib/api/server";
 
-// Signup no longer logs the user in directly — it triggers an email OTP that must
-// be verified (see /api/auth/verify). So this just proxies the backend response.
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const res = await fetch(`${API_V1}/auth/register`, {
+  const res = await fetch(`${API_V1}/auth/resend-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     cache: "no-store",
   });
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
+  return NextResponse.json(await res.json(), { status: res.status });
 }

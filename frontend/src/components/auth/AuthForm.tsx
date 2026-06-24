@@ -37,6 +37,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Email-verification (OTP) step, entered after signup or when an unverified
+  // user tries to log in.
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [code, setCode] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+
+  const goToApp = (user: { is_superuser?: boolean } | undefined) => {
+    const next = user?.is_superuser ? "/admin" : searchParams.get("next") || "/app/compose";
+    router.push(next);
+    router.refresh();
+  };
 
   const strength = scorePassword(values.password);
   const strengthLabel =
@@ -96,22 +107,127 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       const data = await res.json().catch(() => null);
       if (!res.ok) {
+        // An unverified account trying to log in → send them to the OTP step.
+        if (data?.error?.code === "email_not_verified") {
+          setPendingEmail(values.email.trim());
+          setStep("otp");
+          setError(null);
+          setLoading(false);
+          void fetch("/api/auth/resend", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: values.email.trim() }),
+          });
+          return;
+        }
         setError(data?.error?.message || "Something went wrong. Please try again.");
         setLoading(false);
         return;
       }
 
-      // Route by user type: platform admins go to the admin console, everyone
-      // else to the workspace app. An explicit ?next= wins for normal users.
-      const isSuperuser = data?.user?.is_superuser === true;
-      const next = isSuperuser ? "/admin" : searchParams.get("next") || "/app/compose";
-      router.push(next);
-      router.refresh();
+      // Signup now returns "verification required" instead of a session.
+      if (isSignup && data?.verification_required) {
+        setPendingEmail(data.email || values.email.trim());
+        setStep("otp");
+        setLoading(false);
+        return;
+      }
+
+      goToApp(data?.user);
     } catch {
       setError("Couldn't reach the server. Is the API running?");
       setLoading(false);
     }
   };
+
+  const verifyOtp = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    if (code.trim().length < 4) {
+      setError("Enter the code from your email.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail, code: code.trim() }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error?.message || "That code didn't work. Try again.");
+        setLoading(false);
+        return;
+      }
+      goToApp(data?.user);
+    } catch {
+      setError("Couldn't reach the server. Is the API running?");
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async () => {
+    setError(null);
+    await fetch("/api/auth/resend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: pendingEmail }),
+    }).catch(() => {});
+    setError("A new code is on the way.");
+  };
+
+  if (step === "otp") {
+    return (
+      <form className="auth-form" id="otpForm" noValidate onSubmit={verifyOtp}>
+        <h1>Verify your email</h1>
+        <p className="sub">
+          Enter the {6}-digit code we sent to <strong>{pendingEmail}</strong>.
+        </p>
+
+        <div className={"error-banner" + (error ? " show" : "")}>
+          <svg width="18" height="18">
+            <use href="#i-alert" />
+          </svg>{" "}
+          <span>{error}</span>
+        </div>
+
+        <div className="auth-fields">
+          <div className="field">
+            <label className="field-label" htmlFor="otp">
+              Verification code
+            </label>
+            <input
+              className="input"
+              id="otp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className={"btn btn-spark btn-lg btn-block" + (loading ? " is-loading" : "")}
+          style={{ marginTop: 24 }}
+          disabled={loading}
+        >
+          {loading ? <span className="spin" /> : "Verify & continue"}
+        </button>
+
+        <p className="auth-switch">
+          Didn&apos;t get it?{" "}
+          <button type="button" className="link" onClick={resendOtp}>
+            Resend code
+          </button>
+        </p>
+      </form>
+    );
+  }
 
   return (
     <form className="auth-form" id={isSignup ? "signupForm" : "loginForm"} noValidate onSubmit={onSubmit}>

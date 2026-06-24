@@ -25,6 +25,22 @@ class AuthResponse(BaseModel):
     tokens: TokenPair
 
 
+class RegisterPendingResponse(BaseModel):
+    """Signup accepted; an OTP was emailed and must be verified before login."""
+
+    verification_required: bool = True
+    email: EmailStr
+
+
+class OtpVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=10)
+
+
+class OtpResendRequest(BaseModel):
+    email: EmailStr
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 

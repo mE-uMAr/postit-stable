@@ -23,7 +23,9 @@ from app.models.user import User
 from app.repositories.user import RefreshTokenRepository, UserRepository
 from app.repositories.workspace import MembershipRepository
 from app.schemas.token import TokenPair
+from app.services import otp as otp_service
 from app.services import workspace as workspace_service
+from app.services.email import send_email
 
 
 def _now() -> datetime:
@@ -55,8 +57,56 @@ async def authenticate(db: AsyncSession, *, email: str, password: str) -> User:
         raise AuthError("Incorrect email or password.", code="invalid_credentials")
     if not user.is_active:
         raise AuthError("This account is disabled.", code="account_disabled")
+    if not user.is_verified:
+        raise AuthError("Please verify your email to continue.", code="email_not_verified")
     user.last_login_at = _now()
     return user
+
+
+# --------------------------------------------------------------------------- #
+# Signup email verification (OTP)
+# --------------------------------------------------------------------------- #
+async def _send_otp_email(email: str, name: str, code: str) -> None:
+    subject = "Your Postit verification code"
+    text = (
+        f"Hi {name},\n\n"
+        f"Your Postit verification code is: {code}\n\n"
+        f"It expires in {settings.OTP_TTL_SECONDS // 60} minutes. "
+        "If you didn't create a Postit account, you can ignore this email."
+    )
+    html = (
+        f"<p>Hi {name},</p><p>Your Postit verification code is:</p>"
+        f"<p style='font-size:28px;font-weight:700;letter-spacing:6px'>{code}</p>"
+        f"<p>It expires in {settings.OTP_TTL_SECONDS // 60} minutes.</p>"
+    )
+    await send_email(to=email, subject=subject, text=text, html=html)
+
+
+async def send_signup_otp(db: AsyncSession, user: User) -> None:
+    code = await otp_service.issue(user.email)
+    await _send_otp_email(user.email, user.full_name, code)
+
+
+async def verify_signup(db: AsyncSession, *, email: str, code: str) -> User:
+    users = UserRepository(db)
+    user = await users.get_by_email(email.lower().strip())
+    if user is None:
+        raise AuthError("No pending signup for that email.", code="no_pending_signup")
+    if user.is_verified:
+        return user  # idempotent: already verified
+    if not await otp_service.verify(email, code):
+        raise AuthError("That code is invalid or has expired.", code="invalid_otp")
+    user.is_verified = True
+    return user
+
+
+async def resend_signup_otp(db: AsyncSession, *, email: str) -> None:
+    users = UserRepository(db)
+    user = await users.get_by_email(email.lower().strip())
+    # Stay quiet about which emails exist / still need verification.
+    if user is None or user.is_verified:
+        return
+    await send_signup_otp(db, user)
 
 
 async def issue_tokens(

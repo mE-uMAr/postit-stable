@@ -90,6 +90,21 @@ class Settings(BaseSettings):
     AI_TIMEOUT_SECONDS: float = 30.0
     AI_MAX_TOKENS: int = 600
 
+    # ---- Email (SMTP) ----
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM: str | None = None            # defaults to SMTP_USER when unset
+    SMTP_FROM_NAME: str = "Postit"
+    SMTP_USE_TLS: bool = True               # STARTTLS (port 587); for SSL use port 465 + SMTP_USE_SSL
+    SMTP_USE_SSL: bool = False
+
+    # ---- Signup OTP (email verification) ----
+    OTP_TTL_SECONDS: int = 600
+    OTP_LENGTH: int = 6
+    OTP_MAX_ATTEMPTS: int = 5
+
     # ---- Paddle (Billing) ----
     PADDLE_API_KEY: str | None = None          # server-side secret key
     PADDLE_CLIENT_TOKEN: str | None = None     # public client-side token (Paddle.js)
@@ -143,6 +158,14 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.lower() == "production"
+
+    @property
+    def smtp_configured(self) -> bool:
+        return bool(self.SMTP_HOST)
+
+    @property
+    def email_from(self) -> str:
+        return self.SMTP_FROM or self.SMTP_USER or "no-reply@postit.app"
 
     @property
     def paddle_enabled(self) -> bool:
