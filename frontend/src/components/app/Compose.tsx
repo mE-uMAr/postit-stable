@@ -14,7 +14,9 @@ const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
 
 interface MediaItem {
   type: "image" | "video";
-  id: number;
+  key: string;
+  file: File; // held client-side; streamed to platforms only at publish time
+  previewUrl: string; // object URL for local preview
 }
 
 interface Variant {
@@ -117,6 +119,7 @@ export function Compose() {
   const [text, setText] = useState("");
   const [tone, setTone] = useState("Match my brand");
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(["x", "linkedin", "threads", "facebook"]),
   );
@@ -153,8 +156,22 @@ export function Compose() {
   };
   const selectAllEligible = () => setSelected(new Set(platforms.filter((p) => elig(p.id).ok).map((p) => p.id)));
 
-  const addMedia = (type: MediaItem["type"]) => setMedia((m) => [...m, { type, id: Date.now() + Math.random() }]);
-  const removeMedia = (id: number) => setMedia((m) => m.filter((x) => x.id !== id));
+  const addFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    const items: MediaItem[] = Array.from(files).map((file) => ({
+      type: file.type.startsWith("video/") ? "video" : "image",
+      key: `${file.name}-${Date.now()}-${Math.random()}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setMedia((m) => [...m, ...items]);
+  };
+  const removeMedia = (key: string) =>
+    setMedia((m) => {
+      const found = m.find((x) => x.key === key);
+      if (found) URL.revokeObjectURL(found.previewUrl);
+      return m.filter((x) => x.key !== key);
+    });
 
   const eligibleSelected = [...selected].filter((k) => elig(k).ok);
 
@@ -162,7 +179,11 @@ export function Compose() {
   const handleFor = (id: string) => connByPlatform.get(id)?.handle ?? "Preview";
 
   const ensurePost = async (): Promise<string> => {
-    const payload = { body: text, tone, media: media.map((m) => ({ type: m.type })) };
+    const payload = {
+      body: text,
+      tone,
+      media: media.map((m) => ({ type: m.type })),
+    };
     if (postId) {
       await api.patch(`posts/${postId}`, payload);
       return postId;
@@ -223,20 +244,19 @@ export function Compose() {
   };
 
   const confirmAction = async () => {
-    const wasSchedule = modal === "schedule";
     setModal(null);
     if (!postId) return;
     try {
-      if (wasSchedule) {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        d.setHours(9, 0, 0, 0);
-        await api.post(`posts/${postId}/schedule`, { scheduled_at: d.toISOString() });
-        pushToast(`Scheduled to ${postCount} platforms for 9:00 AM`);
-      } else {
-        await api.post(`posts/${postId}/publish`);
-        pushToast(`Posted to ${postCount} platforms`);
+      // Media is streamed with the publish request (not stored server-side).
+      const fd = new FormData();
+      media.forEach((m) => fd.append("files", m.file, m.file.name));
+      const res = await fetch(`/api/posts/${postId}/publish`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        pushToast(data?.error?.message || "Couldn't publish");
+        return;
       }
+      pushToast(`Posted to ${postCount} platforms`);
     } catch (e) {
       pushToast(errorMessage(e));
     }
@@ -271,26 +291,34 @@ export function Compose() {
           {media.length > 0 && (
             <div className="media-thumbs">
               {media.map((m) => (
-                <div key={m.id} className="media-thumb placeholder" style={{ fontSize: 10 }}>
-                  {m.type === "video" ? "video" : "image"}
-                  <button className="rm" onClick={() => removeMedia(m.id)}><Icon name="x" size={12} /></button>
+                <div key={m.key} className="media-thumb">
+                  {m.type === "video" ? (
+                    <video src={m.previewUrl} muted />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.previewUrl} alt="" />
+                  )}
+                  <button className="rm" onClick={() => removeMedia(m.key)}>
+                    <Icon name="x" size={12} />
+                  </button>
                 </div>
               ))}
             </div>
           )}
-          <div className="media-zone" onClick={() => addMedia("image")}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            hidden
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <div className="media-zone" onClick={() => fileInputRef.current?.click()}>
             <Icon name="image" size={18} />
-            <span>Drag images or video here, or click to add</span>
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{ marginLeft: 8 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                addMedia("video");
-              }}
-            >
-              + Add video
-            </button>
+            <span>Click to add images or video</span>
           </div>
         </div>
 
@@ -419,9 +447,6 @@ export function Compose() {
         </div>
         <span className="spacer" />
         <button className="btn btn-ghost" onClick={saveDraft}>Save draft</button>
-        <button className="btn btn-secondary" onClick={() => setModal("schedule")} disabled={!canPublish}>
-          <Icon name="clock" size={17} /> Schedule
-        </button>
         <button className="btn btn-spark" onClick={() => setModal("post")} disabled={!canPublish}>
           <Icon name="send" size={17} /> Post now
         </button>

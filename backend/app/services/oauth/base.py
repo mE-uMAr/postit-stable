@@ -32,6 +32,16 @@ class TokenResult:
 
 
 @dataclass
+class MediaRef:
+    """A piece of media to attach to a post (streamed at publish time, not stored)."""
+
+    kind: str  # "image" | "video"
+    content_type: str
+    data: bytes  # raw bytes — uploaded directly to the platform
+    filename: str = "upload"
+
+
+@dataclass
 class AccountInfo:
     external_account_id: str | None = None
     handle: str | None = None
@@ -125,7 +135,15 @@ class OAuthProvider:
     async def fetch_account(self, token: TokenResult) -> AccountInfo:  # noqa: ARG002
         return AccountInfo()
 
-    async def publish_text(self, *, access_token: str, external_account_id: str | None, text: str) -> str:
+    async def publish(
+        self,
+        *,
+        access_token: str,
+        external_account_id: str | None,
+        text: str,
+        title: str | None = None,
+        media: list[MediaRef] | None = None,
+    ) -> str:
         raise OAuthError(
             self.unsupported_reason
             or f"Publishing is not supported for {self.platform_id} in this build."

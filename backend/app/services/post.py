@@ -221,9 +221,12 @@ async def _pending_job_for_post(db: AsyncSession, post_id: uuid.UUID) -> Publish
     return (await db.execute(stmt)).scalars().first()
 
 
-async def publish(db: AsyncSession, post: Post) -> Post:
-    """Publish immediately (synchronous) and record a completed outbox job."""
-    post = await publish_service.publish_post(db, post)
+async def publish(db: AsyncSession, post: Post, media=None) -> Post:  # noqa: ANN001
+    """Publish immediately (synchronous) and record a completed outbox job.
+
+    ``media`` (list of MediaRef) is streamed to the platforms and not stored.
+    """
+    post = await publish_service.publish_post(db, post, media)
     db.add(
         PublishJob(
             post_id=post.id,

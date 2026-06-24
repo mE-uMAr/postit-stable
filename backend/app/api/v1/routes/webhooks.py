@@ -107,6 +107,7 @@ async def _revoke_by_external_id(db: AsyncSession, platform_id: str, external_id
 # --------------------------------------------------------------------------- #
 # Webhook subscription verification (Meta GET handshake)
 # --------------------------------------------------------------------------- #
+@router.get("/{platform_id}", response_class=PlainTextResponse)
 @router.get("/{platform_id}/deauthorize", response_class=PlainTextResponse)
 @router.get("/{platform_id}/delete", response_class=PlainTextResponse)
 async def verify_subscription(
@@ -115,10 +116,40 @@ async def verify_subscription(
     hub_challenge: str | None = Query(default=None, alias="hub.challenge"),
     hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"),
 ):
+    """Meta webhook GET handshake — echo hub.challenge when the verify token matches.
+
+    This is the URL to paste into a platform's **Webhooks** product:
+    ``https://<api>/api/v1/webhooks/<platform>`` with the verify token set to
+    ``OAUTH_WEBHOOK_VERIFY_TOKEN``.
+    """
     _ensure_known_platform(platform_id)
     if hub_mode == "subscribe" and hub_verify_token == settings.OAUTH_WEBHOOK_VERIFY_TOKEN:
         return PlainTextResponse(hub_challenge or "")
     raise PermissionError_("Invalid verify token.", code="bad_verify_token")
+
+
+@router.post("/{platform_id}")
+async def receive_webhook(
+    platform_id: str, request: Request, db: AsyncSession = Depends(get_db)
+):
+    """Receive webhook event notifications (signature-verified when possible)."""
+    _ensure_known_platform(platform_id)
+    raw = await request.body()
+    _, secret = settings.platform_credentials(platform_id)
+    sig = request.headers.get("x-hub-signature-256", "")
+    if secret and sig.startswith("sha256="):
+        expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, sig.split("=", 1)[1]):
+            raise PermissionError_("Invalid signature.", code="bad_signature")
+    await record_audit(
+        db,
+        action="platform.webhook",
+        target_type="platform",
+        target_id=platform_id,
+        meta={"bytes": len(raw)},
+        **client_meta(request),
+    )
+    return {"received": True}
 
 
 # --------------------------------------------------------------------------- #

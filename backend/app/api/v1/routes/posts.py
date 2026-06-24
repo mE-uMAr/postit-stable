@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -29,6 +29,7 @@ from app.schemas.post import (
     TargetUpdate,
 )
 from app.services import post as post_service
+from app.services.oauth.base import MediaRef
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -143,9 +144,18 @@ async def schedule_post(
 @router.post("/{post_id}/publish", response_model=PostRead)
 async def publish_post(
     post_id: uuid.UUID,
+    files: list[UploadFile] = File(default=[]),
     db: AsyncSession = Depends(get_db),
     ctx: WorkspaceContext = Depends(_editor),
 ):
+    """Publish now. Optional media files are streamed to the platforms (not stored)."""
+    media: list[MediaRef] = []
+    for f in files or []:
+        ct = (f.content_type or "").lower()
+        kind = "video" if ct.startswith("video/") else "image"
+        media.append(
+            MediaRef(kind=kind, content_type=ct, data=await f.read(), filename=f.filename or "upload")
+        )
     post = await post_service.get_post_or_404(db, post_id, ctx.id)
-    post = await post_service.publish(db, post)
+    post = await post_service.publish(db, post, media)
     return PostRead.model_validate(post)

@@ -21,14 +21,16 @@ from app.repositories.platform import ConnectionRepository
 from app.repositories.post import PostTargetRepository
 from app.services import usage as usage_service
 from app.services.oauth import get_oauth_provider, oauth_supported
-from app.services.oauth.base import OAuthError
+from app.services.oauth.base import MediaRef, OAuthError
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def _publish_target(db: AsyncSession, target: PostTarget, post: Post) -> bool:
+async def _publish_target(
+    db: AsyncSession, target: PostTarget, post: Post, media: list[MediaRef]
+) -> bool:
     """Publish a single target to its live platform. Returns True on success.
 
     Raises on any failure so the caller marks just this target failed.
@@ -42,18 +44,19 @@ async def _publish_target(db: AsyncSession, target: PostTarget, post: Post) -> b
         raise OAuthError(f"{target.platform_id} publishing isn't available.")
 
     provider = get_oauth_provider(target.platform_id)
-    if not provider.can_publish_text:
+    if not provider.can_publish_text and not media:
         raise OAuthError(provider.unsupported_reason)
 
     access_token = decrypt_secret(conn.access_token)
     if not access_token:
         raise OAuthError("Stored credentials are missing or invalid — reconnect the account.")
 
-    external_id = await provider.publish_text(
+    external_id = await provider.publish(
         access_token=access_token,
         external_account_id=conn.external_account_id,
         text=target.content,
         title=post.title,
+        media=media,
     )
     target.status = TargetStatus.published
     target.published_at = _now()
@@ -62,13 +65,20 @@ async def _publish_target(db: AsyncSession, target: PostTarget, post: Post) -> b
     return True
 
 
-async def publish_post(db: AsyncSession, post: Post) -> Post:
+async def publish_post(
+    db: AsyncSession, post: Post, media: list[MediaRef] | None = None
+) -> Post:
     """Publish every target of a post and roll up its status. Idempotent-ish:
-    already-published targets are left untouched."""
+    already-published targets are left untouched.
+
+    ``media`` is streamed straight to the platforms (nothing is stored); the
+    scheduled worker passes none, so scheduled posts are text-only.
+    """
     targets = await PostTargetRepository(db).list_for_post(post.id)
     if not targets:
         raise ValidationError_("Generate platform versions before publishing.", code="no_targets")
 
+    media = media or []
     published = 0
     failed = 0
     for t in targets:
@@ -76,7 +86,7 @@ async def publish_post(db: AsyncSession, post: Post) -> Post:
             published += 1
             continue
         try:
-            ok = await _publish_target(db, t, post)
+            ok = await _publish_target(db, t, post, media)
             published += 1 if ok else 0
             failed += 0 if ok else 1
         except Exception as exc:  # pragma: no cover - defensive; a target never blocks the rest
