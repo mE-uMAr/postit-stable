@@ -5,7 +5,7 @@ description = "Postit — async FastAPI backend (auth, posts, billing, analytics
 requires-python = ">=3.11,<3.13"
 dependencies = [
     # Web framework
-    "fastapi==0.115.6",
+    "fastapi[standard]==0.115.6",  # [standard] pulls in fastapi-cli, needed for `fastapi run` at runtime
     "uvicorn[standard]==0.34.0",
     "python-multipart==0.0.20",
     # Data layer
