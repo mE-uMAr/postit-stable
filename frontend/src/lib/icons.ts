@@ -43,6 +43,7 @@ export const ICONS = {
   voice: "M12 3a3 3 0 013 3v6a3 3 0 01-6 0V6a3 3 0 013-3z M5 11a7 7 0 0014 0 M12 18v3",
   card: "M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z M3 10h18",
   upload: "M12 16V4 M7 9l5-5 5 5 M5 20h14",
+  logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
 } as const;
 
 export type IconName = keyof typeof ICONS;

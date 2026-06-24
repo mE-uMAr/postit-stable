@@ -74,6 +74,10 @@ export function Topbar() {
   const notifRef = useRef<HTMLDivElement>(null);
   const unread = notifs.filter((n) => !n.read_at).length;
 
+  // ---- Account menu ----
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const loadNotifs = async () => {
     try {
       setNotifs(await api.get<Notif[]>("notifications"));
@@ -90,6 +94,7 @@ export function Topbar() {
     const onDoc = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -184,9 +189,45 @@ export function Topbar() {
           <Icon name="plus" size={18} /> New post
         </button>
       )}
-      <button className="avatar-btn" title="Sign out" onClick={() => void logout()}>
-        {initials}
-      </button>
+      <div className="tb-pop-wrap" ref={menuRef}>
+        <button
+          className="avatar-btn"
+          title="Account"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          {initials}
+        </button>
+        {menuOpen && (
+          <div className="tb-pop tb-account-menu" role="menu">
+            <div className="tb-pop-head tb-account-head">
+              <div className="t">{user?.full_name || "Account"}</div>
+              {user?.email && <div className="b">{user.email}</div>}
+            </div>
+            <button
+              className="tb-pop-item"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                router.push("/app/settings");
+              }}
+            >
+              <Icon name="settings" size={16} /> <span>Profile &amp; settings</span>
+            </button>
+            <button
+              className="tb-pop-item"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                void logout();
+              }}
+            >
+              <Icon name="logout" size={16} /> <span>Log out</span>
+            </button>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
