@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 248 64" width="248" height="64" role="img" aria-label="Postit">
+  <!-- Mark -->
+  <path d="M16 8 H48 a8 8 0 0 1 8 8 V40 L40 56 H16 a8 8 0 0 1 -8 -8 V16 a8 8 0 0 1 8 -8 Z" fill="#FFB627"/>
+  <path d="M40 40 H56 L40 56 Z" fill="#E89D0C"/>
+  <path fill-rule="evenodd" d="M24 20 H34 a8 8 0 0 1 0 16 H30 V44 H24 Z M30 26 H34 a4 4 0 0 1 0 8 H30 Z" fill="#16151A"/>
+  <!-- Wordmark -->
+  <text x="76" y="43" font-family="'General Sans','Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+        font-size="38" font-weight="600" letter-spacing="-1.4" fill="#16151A">Postit</text>
+</svg>

@@ -7,7 +7,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
@@ -20,11 +20,40 @@ from app.core.rate_limit import check_rate_limit
 from app.core.redis import init_kv
 from app.worker.scheduler import run_scheduler
 
+# The Postit mark, served as the API/docs favicon (no filesystem dependency).
+FAVICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Postit">'
+    '<path d="M16 8 H48 a8 8 0 0 1 8 8 V40 L40 56 H16 a8 8 0 0 1 -8 -8 V16 a8 8 0 0 1 8 -8 Z" fill="#FFB627"/>'
+    '<path d="M40 40 H56 L40 56 Z" fill="#E89D0C"/>'
+    '<path fill-rule="evenodd" d="M24 20 H34 a8 8 0 0 1 0 16 H30 V44 H24 Z M30 26 H34 a4 4 0 0 1 0 8 H30 Z" fill="#16151A"/>'
+    "</svg>"
+)
+
+
+def _warn_on_insecure_production_config() -> None:
+    """Log loud warnings if the app boots in production with insecure defaults."""
+    if not settings.is_production:
+        return
+    problems: list[str] = []
+    if settings.DEBUG:
+        problems.append("DEBUG is true")
+    if settings.SECRET_KEY == "change-me":
+        problems.append("SECRET_KEY is the default 'change-me'")
+    if settings.OAUTH_WEBHOOK_VERIFY_TOKEN == "change-me-verify-token":
+        problems.append("OAUTH_WEBHOOK_VERIFY_TOKEN is the default")
+    if "*" in settings.CORS_ORIGINS:
+        problems.append("CORS_ORIGINS allows '*' with credentials")
+    if settings.PUBLIC_API_URL.startswith("http://localhost"):
+        problems.append("PUBLIC_API_URL still points at localhost")
+    if problems:
+        logger.warning("INSECURE PRODUCTION CONFIG: %s", "; ".join(problems))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
     await init_kv()
+    _warn_on_insecure_production_config()
     logger.info("Starting %s (%s)", settings.PROJECT_NAME, settings.ENVIRONMENT)
 
     stop = asyncio.Event()
@@ -44,14 +73,16 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    # Don't expose interactive docs / OpenAPI schema in production.
+    expose_docs = not settings.is_production
     app = FastAPI(
         title=settings.PROJECT_NAME,
         version="1.0.0",
         default_response_class=ORJSONResponse,
         lifespan=lifespan,
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
     )
 
     app.add_middleware(
@@ -118,9 +149,13 @@ def create_app() -> FastAPI:
         return {
             "service": settings.PROJECT_NAME,
             "version": "1.0.0",
-            "docs": "/docs",
+            "docs": "/docs" if expose_docs else None,
             "api": settings.API_V1_PREFIX,
         }
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> Response:
+        return Response(content=FAVICON_SVG, media_type="image/svg+xml")
 
     return app
 

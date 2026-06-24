@@ -9,7 +9,7 @@ brand voice, an **admin-editable site CMS**, **DB error logging**, and a superus
 FastAPI · SQLAlchemy 2.0 (async) · Alembic · Pydantic v2 · PyJWT (access + rotating refresh) ·
 argon2 · Redis (optional, in-memory fallback) · Paddle (httpx) · MySQL 8 (prod) / SQLite (dev).
 
-## Quick start (local, SQLite - no Docker needed)
+## Quick start (local, SQLite)
 
 ```bash
 cd backend
@@ -39,13 +39,21 @@ python -m app.db.seed --all    # both (default when no flag)
 | Super admin | `admin@postit.app` | `admin12345`  |
 | Demo owner  | `rina@maple.co`    | `password123` |
 
-## Production (MySQL + Redis via Docker)
+## Production (managed MySQL + Redis)
+
+Point the app at a managed MySQL 8 and (optionally) Redis via env vars:
 
 ```bash
-docker compose up --build      # mysql:8 + redis:7 + api (runs migrate + seed)
+DATABASE_URL=mysql+aiomysql://user:pass@host:3306/postit?charset=utf8mb4
+REDIS_URL=redis://host:6379/0   # optional; in-memory fallback when unset
 ```
 
-Set `DATABASE_URL=mysql+aiomysql://user:pass@host:3306/postit?charset=utf8mb4`.
+Run migrations + core seed once against the production database:
+
+```bash
+alembic upgrade head
+python -m app.db.seed --core   # platforms, plans, site content, superadmin
+```
 
 ## Deploy to FastAPI Cloud
 Pushes to `main` that touch `backend/**` are deployed by

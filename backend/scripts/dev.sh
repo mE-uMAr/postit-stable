@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command local backend bootstrap (SQLite, no Docker).
+# One-command local backend bootstrap (SQLite).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
