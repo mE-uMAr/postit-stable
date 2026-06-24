@@ -51,6 +51,14 @@
 .btn-lg { --h: 48px; padding: 0 24px; font-size: 16px; }
 .btn-block { display: flex; width: 100%; }
 
+/* A <button> that should look like an inline text link (resets browser chrome). */
+button.link {
+  display: inline; background: none; border: none; padding: 0; margin: 0;
+  font: inherit; color: var(--ai); font-weight: 600; cursor: pointer;
+}
+button.link:hover { text-decoration: underline; }
+button.link:disabled { opacity: 0.6; cursor: default; text-decoration: none; }
+
 .btn-primary { background: var(--ink); color: var(--canvas); }
 .btn-primary:hover { box-shadow: var(--e1); }
 
