@@ -67,6 +67,15 @@ engine = create_async_engine(
     **_engine_kwargs(),
 )
 
+if not settings.is_sqlite:
+    # Work around a SQLAlchemy 2.0.x + aiomysql incompatibility in pool_pre_ping.
+    # The async aiomysql adapter's Connection.ping(reconnect) has no default, but
+    # SQLAlchemy auto-detects PyMySQL's sync ping() default (reconnect=False) and,
+    # via that branch, calls ping() with no args -> "ping() missing 1 required
+    # positional argument: 'reconnect'". Forcing _send_false_to_ping makes pre-ping
+    # call ping(False), which the aiomysql adapter accepts.
+    engine.sync_engine.dialect._send_false_to_ping = True
+
 SessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
