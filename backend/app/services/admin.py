@@ -92,14 +92,17 @@ async def list_users(db: AsyncSession, q: str | None, offset: int, limit: int) -
     users = (await db.execute(stmt)).scalars().all()
     total = int((await db.execute(count_stmt)).scalar_one())
 
-    # Workspace counts per listed user.
-    enriched = []
-    for u in users:
-        wc = await _scalar(
-            db,
-            select(func.count()).select_from(Membership).where(Membership.user_id == u.id),
+    # Workspace counts for the whole page in one grouped query (avoids N+1).
+    user_ids = [u.id for u in users]
+    counts: dict = {}
+    if user_ids:
+        rows = await db.execute(
+            select(Membership.user_id, func.count())
+            .where(Membership.user_id.in_(user_ids))
+            .group_by(Membership.user_id)
         )
-        enriched.append((u, wc))
+        counts = {uid: int(c) for uid, c in rows.all()}
+    enriched = [(u, counts.get(u.id, 0)) for u in users]
     return enriched, total
 
 
@@ -123,25 +126,42 @@ async def list_workspaces(db: AsyncSession, offset: int, limit: int) -> tuple[li
             .limit(limit)
         )
     ).scalars().all()
-    out = []
-    for ws in rows:
-        members = await _scalar(
-            db, select(func.count()).select_from(Membership).where(Membership.workspace_id == ws.id)
+    # Enrich the whole page with a fixed number of grouped queries (avoids N+1:
+    # previously 3 queries per workspace row).
+    ws_ids = [ws.id for ws in rows]
+    member_counts: dict = {}
+    post_counts: dict = {}
+    plan_names: dict = {}
+    if ws_ids:
+        m_rows = await db.execute(
+            select(Membership.workspace_id, func.count())
+            .where(Membership.workspace_id.in_(ws_ids))
+            .group_by(Membership.workspace_id)
         )
-        posts = await _scalar(
-            db,
-            select(func.count()).select_from(Post).where(
-                Post.workspace_id == ws.id, Post.deleted_at.is_(None)
-            ),
+        member_counts = {wid: int(c) for wid, c in m_rows.all()}
+
+        p_rows = await db.execute(
+            select(Post.workspace_id, func.count())
+            .where(Post.workspace_id.in_(ws_ids), Post.deleted_at.is_(None))
+            .group_by(Post.workspace_id)
         )
-        sub = (
-            await db.execute(
-                select(Plan.name)
-                .join(Subscription, Subscription.plan_id == Plan.id)
-                .where(Subscription.workspace_id == ws.id)
-            )
-        ).scalar_one_or_none()
-        out.append({"workspace": ws, "member_count": members, "post_count": posts, "plan_name": sub})
+        post_counts = {wid: int(c) for wid, c in p_rows.all()}
+
+        s_rows = await db.execute(
+            select(Subscription.workspace_id, Plan.name).join(Plan, Plan.id == Subscription.plan_id)
+            .where(Subscription.workspace_id.in_(ws_ids))
+        )
+        plan_names = {wid: name for wid, name in s_rows.all()}
+
+    out = [
+        {
+            "workspace": ws,
+            "member_count": member_counts.get(ws.id, 0),
+            "post_count": post_counts.get(ws.id, 0),
+            "plan_name": plan_names.get(ws.id),
+        }
+        for ws in rows
+    ]
     return out, total
 
 
