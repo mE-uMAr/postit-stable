@@ -8,8 +8,10 @@ over :data:`DEFAULT_CONTENT` so a fresh install always renders.
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import logger
 from app.models.site_setting import SiteSetting
 
 DEFAULT_CONTENT: dict = {
@@ -107,7 +109,16 @@ EDITABLE_KEYS = set(DEFAULT_CONTENT.keys())
 
 
 async def get_content(db: AsyncSession) -> dict:
-    rows = (await db.execute(select(SiteSetting))).scalars().all()
+    try:
+        rows = (await db.execute(select(SiteSetting))).scalars().all()
+    except SQLAlchemyError:
+        # The public marketing site must render even if the DB is unreachable.
+        # Roll back so the request-scoped session closes cleanly (the get_db
+        # dependency would otherwise re-raise on its trailing commit), and serve
+        # the built-in defaults.
+        await db.rollback()
+        logger.warning("site.get_content: DB unavailable, serving default content")
+        return dict(DEFAULT_CONTENT)
     stored = {r.key: r.value for r in rows}
     return {key: stored.get(key, default) for key, default in DEFAULT_CONTENT.items()}
 

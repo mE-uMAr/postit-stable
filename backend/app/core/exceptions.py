@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import logger
@@ -99,6 +99,13 @@ async def _persist_error(
     request: Request, exc: Exception, *, status_code: int, code: str, message: str
 ) -> None:
     """Write a server error (5xx) to the DB. Best-effort: never raises."""
+    # If the DB itself is the failure (e.g. host unreachable / connection refused),
+    # persisting to that same DB cannot succeed and would emit a second full
+    # traceback per request, drowning the real error. Skip it with one concise line.
+    if isinstance(exc, (OperationalError, InterfaceError)):
+        logger.warning("DB unavailable; not persisting error log (%s)", exc.__class__.__name__)
+        return
+
     # Imported lazily to avoid a circular import at module load.
     from app.core.database import SessionLocal
     from app.models.error_log import ErrorLog
@@ -121,8 +128,9 @@ async def _persist_error(
                 )
             )
             await session.commit()
-    except Exception:  # pragma: no cover - logging must never mask the original error
-        logger.exception("Failed to persist error log")
+    except Exception as persist_exc:  # pragma: no cover - must never mask the original error
+        # One concise line, not a full traceback, so it can't bury the real error.
+        logger.warning("Failed to persist error log: %s", persist_exc)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
