@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Sparkle } from "@/components/Sparkle";
 import { PlatformLogo } from "@/components/PlatformLogo";
@@ -120,9 +120,10 @@ export function Compose() {
   const [tone, setTone] = useState("Match my brand");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(["x", "linkedin", "threads", "facebook"]),
-  );
+  // No platform is selectable until the user has actually connected its account.
+  // Starts empty and is seeded once from real connections below.
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const seededRef = useRef(false);
   const [postId, setPostId] = useState<string | null>(null);
   const [variants, setVariants] = useState<Variants | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -142,8 +143,26 @@ export function Compose() {
   const elig = (id: string): Eligibility => {
     const p = platformById.get(id);
     if (!p) return { ok: false };
+    // A platform is only postable once its account is connected via OAuth.
+    const conn = connByPlatform.get(id);
+    if (!conn || conn.status !== "connected")
+      return { ok: false, reason: `Connect your ${p.name} account in Connections first.` };
     return eligibility(p, { hasMedia, hasVideo, charCount });
   };
+
+  // Seed the default selection from the platforms the user actually has connected
+  // (text-capable ones, since a fresh post has no media yet). Runs once after both
+  // platforms and connections have loaded; fresh users start with nothing selected.
+  useEffect(() => {
+    if (seededRef.current || !platformsApi.data || !connectionsApi.data) return;
+    seededRef.current = true;
+    const defaults = platforms.filter((p) => {
+      const c = connByPlatform.get(p.id);
+      if (!c || c.status !== "connected") return false;
+      return !p.requires_media && !p.requires_video;
+    });
+    if (defaults.length) setSelected(new Set(defaults.map((p) => p.id)));
+  }, [platformsApi.data, connectionsApi.data, platforms, connByPlatform]);
 
   const toggle = (id: string) => {
     if (!elig(id).ok) return;
