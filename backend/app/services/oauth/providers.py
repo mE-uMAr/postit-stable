@@ -365,13 +365,13 @@ class WordPressProvider(OAuthProvider):
 
 
 # --------------------------------------------------------------------------- #
-# TikTok — video only, binary FILE_UPLOAD
+# TikTok — video only, binary FILE_UPLOAD into the creator's drafts (inbox)
 # --------------------------------------------------------------------------- #
 class TikTokProvider(OAuthProvider):
     platform_id = "tiktok"
     authorize_url = "https://www.tiktok.com/v2/auth/authorize/"
     token_url = "https://open.tiktokapis.com/v2/oauth/token/"
-    scopes = ["user.info.basic", "video.publish"]
+    scopes = ["user.info.basic", "video.upload"]
     scope_separator = ","
     can_publish_text = False
     unsupported_reason = "TikTok needs a video — add a video to the post."
@@ -413,11 +413,13 @@ class TikTokProvider(OAuthProvider):
         if not vid:
             raise OAuthError(self.unsupported_reason)
         size = len(vid.data)
+        # video.upload scope → Content Posting "inbox" API: the video lands in the
+        # creator's TikTok drafts to finish posting (the Direct Post endpoint needs
+        # the audited video.publish scope, which the app isn't approved for).
         init = await self._post_json(
-            "https://open.tiktokapis.com/v2/post/publish/video/init/",
+            "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/",
             token=access_token,
             json={
-                "post_info": {"title": text[:150], "privacy_level": "SELF_ONLY"},
                 "source_info": {
                     "source": "FILE_UPLOAD",
                     "video_size": size,
