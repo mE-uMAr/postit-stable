@@ -55,7 +55,9 @@ async def authorize(
     return AuthorizeResponse(authorize_url=url)
 
 
-# Back-compat alias: the Connections UI calls /reconnect for expired accounts.
+# Back-compat aliases: the Connections UI POSTs /connect for a fresh account and
+# /reconnect for an expired one. Both start the same OAuth authorization flow.
+@router.post("/{platform_id}/connect", response_model=AuthorizeResponse)
 @router.post("/{platform_id}/reconnect", response_model=AuthorizeResponse)
 async def reconnect(
     platform_id: str,
