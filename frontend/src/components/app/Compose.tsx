@@ -1,16 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SiAlibabadotcom, SiAliexpress } from "react-icons/si";
 import { Icon } from "@/components/Icon";
 import { Sparkle } from "@/components/Sparkle";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import { api } from "@/lib/api/client";
 import { errorMessage, useApi } from "@/lib/api/useApi";
-import type { ApiConnection, ApiPlatform, ApiPost, ApiTarget, PlatformKey } from "@/lib/api/types";
+import type {
+  ApiConnection,
+  ApiPlatform,
+  ApiPost,
+  ApiTarget,
+  PlatformKey,
+  ProductDetail,
+  ProductSourceId,
+} from "@/lib/api/types";
 import { useToast } from "./providers/ToastProvider";
 import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
+import { ProductImportModal } from "./ProductImportModal";
 
 const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
+// Cap how many product images we pull into a post to keep the upload sane.
+const MAX_IMPORT_IMAGES = 6;
 
 interface MediaItem {
   type: "image" | "video";
@@ -129,6 +141,7 @@ export function Compose() {
   const [generating, setGenerating] = useState(false);
   const [shimmerKey, setShimmerKey] = useState<string | null>(null);
   const [modal, setModal] = useState<ConfirmMode | null>(null);
+  const [importSource, setImportSource] = useState<ProductSourceId | null>(null);
 
   const hasMedia = media.length > 0;
   const hasVideo = media.some((m) => m.type === "video");
@@ -191,6 +204,62 @@ export function Compose() {
       if (found) URL.revokeObjectURL(found.previewUrl);
       return m.filter((x) => x.key !== key);
     });
+
+  // Pull a remote product asset (image/video) through our same-origin media proxy
+  // and wrap it as a MediaItem so it publishes exactly like an uploaded file.
+  const fetchRemoteMedia = async (
+    remoteUrl: string,
+    kind: "image" | "video",
+    label: string,
+  ): Promise<MediaItem | null> => {
+    try {
+      const res = await fetch(`/api/products/media?url=${encodeURIComponent(remoteUrl)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const ct = blob.type || (kind === "video" ? "video/mp4" : "image/jpeg");
+      const ext = (ct.split("/")[1] || (kind === "video" ? "mp4" : "jpg")).split(";")[0];
+      const file = new File([blob], `${label}-${Date.now()}.${ext}`, { type: ct });
+      return {
+        type: kind,
+        key: `${label}-${Date.now()}-${Math.random()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // Drop an imported product into the composer: its title + description + affiliate
+  // link become the post text, and its images/video are added as media.
+  const importProduct = async (detail: ProductDetail) => {
+    const block = [
+      detail.title.trim(),
+      detail.description.trim(),
+      detail.affiliate_link ? `🛒 ${detail.affiliate_link}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    setText((t) => (t.trim() ? `${t.trim()}\n\n${block}` : block));
+
+    const label = `${detail.source}-${detail.product_id}`;
+    const items: MediaItem[] = [];
+    for (const url of detail.images.slice(0, MAX_IMPORT_IMAGES)) {
+      const it = await fetchRemoteMedia(url, "image", label);
+      if (it) items.push(it);
+    }
+    if (detail.video_url) {
+      const v = await fetchRemoteMedia(detail.video_url, "video", `${label}-video`);
+      if (v) items.push(v);
+    }
+    if (items.length) setMedia((m) => [...m, ...items]);
+    pushToast(
+      `Imported product — ${items.length} media file${items.length === 1 ? "" : "s"} added` +
+        (detail.video_url && !items.some((i) => i.type === "video") ? " (video unavailable)" : ""),
+    );
+  };
 
   const eligibleSelected = [...selected].filter((k) => elig(k).ok);
 
@@ -379,7 +448,9 @@ export function Compose() {
                   onClick={() => toggle(p.id)}
                   title={e.reason || e.warn || ""}
                 >
-                  <span className={"pf-dot pf-" + p.id} />
+                  <span className={"pf pf-" + p.id + " pchip-logo"}>
+                    <PlatformLogo platform={p.id as PlatformKey} />
+                  </span>
                   {p.name}
                   {!e.ok && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--ink-faint)" }} />}
                   {warn && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--spark-deep)" }} />}
@@ -459,6 +530,27 @@ export function Compose() {
         )}
       </div>
 
+      {/* PRODUCT IMPORT - bottom-right floating buttons */}
+      <div className="product-fab-group">
+        <span className="product-fab-label">Import products</span>
+        <button
+          className="product-fab"
+          style={{ background: "#FF6A00" }}
+          onClick={() => setImportSource("alibaba")}
+          title="Fetch products from Alibaba"
+        >
+          <SiAlibabadotcom /> Alibaba
+        </button>
+        <button
+          className="product-fab"
+          style={{ background: "#E62E04" }}
+          onClick={() => setImportSource("aliexpress")}
+          title="Fetch products from AliExpress"
+        >
+          <SiAliexpress /> AliExpress
+        </button>
+      </div>
+
       {/* ACTION BAR */}
       <div className="action-bar">
         <div className="action-summary">
@@ -477,6 +569,14 @@ export function Compose() {
           platforms={shownKeys as PlatformKey[]}
           onClose={() => setModal(null)}
           onConfirm={confirmAction}
+        />
+      )}
+
+      {importSource && (
+        <ProductImportModal
+          source={importSource}
+          onClose={() => setImportSource(null)}
+          onImport={importProduct}
         />
       )}
     </div>

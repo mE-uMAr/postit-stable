@@ -138,6 +138,24 @@ class Settings(BaseSettings):
     BLOGGER_CLIENT_ID: str | None = None
     BLOGGER_CLIENT_SECRET: str | None = None
 
+    # ---- Product import (Alibaba + AliExpress affiliate APIs) ----
+    # AliExpress Affiliate Open Platform (https://api-sg.aliexpress.com/sync, md5 sign).
+    ALIEXPRESS_APP_KEY: str | None = None
+    ALIEXPRESS_APP_SECRET: str | None = None
+    ALIEXPRESS_TRACKING_ID: str | None = None
+    ALIEXPRESS_TARGET_CURRENCY: str = "USD"
+    ALIEXPRESS_TARGET_LANGUAGE: str = "EN"
+    # Alibaba Open Platform (https://openapi-api.alibaba.com/rest, HMAC-SHA256 sign).
+    # access/refresh tokens come from the OAuth flow done in the Alibaba console; the
+    # access token is auto-refreshed at runtime when it expires.
+    ALIBABA_APP_KEY: str | None = None
+    ALIBABA_APP_SECRET: str | None = None
+    ALIBABA_ACCESS_TOKEN: str | None = None
+    ALIBABA_REFRESH_TOKEN: str | None = None
+    ALIBABA_AFFILIATE_CODE: str | None = None   # CPS tracking slug for affiliate links
+    PRODUCT_SHIP_TO_COUNTRY: str = "US"         # destination country for pricing/shipping
+    PRODUCT_IMPORT_TIMEOUT: float = 30.0
+
     # ---- Seed ----
     SEED_SUPERADMIN_EMAIL: str = "admin@postit.app"
     SEED_SUPERADMIN_PASSWORD: str = "admin12345"
@@ -177,6 +195,19 @@ class Settings(BaseSettings):
             "https://api.paddle.com"
             if self.PADDLE_ENVIRONMENT.lower() == "production"
             else "https://sandbox-api.paddle.com"
+        )
+
+    # ---- Product import helpers ----
+    @property
+    def aliexpress_configured(self) -> bool:
+        return bool(
+            self.ALIEXPRESS_APP_KEY and self.ALIEXPRESS_APP_SECRET and self.ALIEXPRESS_TRACKING_ID
+        )
+
+    @property
+    def alibaba_configured(self) -> bool:
+        return bool(
+            self.ALIBABA_APP_KEY and self.ALIBABA_APP_SECRET and self.ALIBABA_ACCESS_TOKEN
         )
 
     # ---- Social OAuth helpers ----

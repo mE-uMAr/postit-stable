@@ -28,6 +28,24 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# Per-platform media capability. A video is only attached to platforms that can
+# carry one; networks that publish stills get the images only (video-only networks
+# such as TikTok/YouTube get just the video). This is what routes an imported
+# product's video to the right targets.
+_VIDEO_OK = {"x", "linkedin", "facebook", "instagram", "threads", "tiktok", "youtube"}
+_IMAGE_OK = {"x", "linkedin", "facebook", "instagram", "threads", "wordpress", "blogger"}
+
+
+def _media_for(platform_id: str, media: list[MediaRef]) -> list[MediaRef]:
+    out: list[MediaRef] = []
+    for m in media:
+        if m.kind == "video" and platform_id in _VIDEO_OK:
+            out.append(m)
+        elif m.kind == "image" and platform_id in _IMAGE_OK:
+            out.append(m)
+    return out
+
+
 async def _publish_target(
     db: AsyncSession, target: PostTarget, post: Post, media: list[MediaRef]
 ) -> bool:
@@ -44,7 +62,8 @@ async def _publish_target(
         raise OAuthError(f"{target.platform_id} publishing isn't available.")
 
     provider = get_oauth_provider(target.platform_id)
-    if not provider.can_publish_text and not media:
+    target_media = _media_for(target.platform_id, media)
+    if not provider.can_publish_text and not target_media:
         raise OAuthError(provider.unsupported_reason)
 
     access_token = decrypt_secret(conn.access_token)
@@ -56,7 +75,7 @@ async def _publish_target(
         external_account_id=conn.external_account_id,
         text=target.content,
         title=post.title,
-        media=media,
+        media=target_media,
     )
     target.status = TargetStatus.published
     target.published_at = _now()

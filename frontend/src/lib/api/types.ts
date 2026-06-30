@@ -107,6 +107,44 @@ export interface ApiPost {
   targets: ApiTarget[];
 }
 
+/* ---- Product import (Alibaba / AliExpress) ---- */
+export type ProductSourceId = "alibaba" | "aliexpress";
+
+export interface ProductSource {
+  id: ProductSourceId;
+  name: string;
+  configured: boolean;
+}
+
+export interface ProductCard {
+  source: ProductSourceId;
+  product_id: string;
+  title: string;
+  price: string | null;
+  currency: string | null;
+  image: string | null;
+  url: string | null;
+}
+
+export interface ProductSearchResult {
+  items: ProductCard[];
+  page: number;
+  has_more: boolean;
+}
+
+export interface ProductDetail {
+  source: ProductSourceId;
+  product_id: string;
+  title: string;
+  description: string;
+  price: string | null;
+  currency: string | null;
+  images: string[];
+  video_url: string | null;
+  affiliate_link: string | null;
+  url: string | null;
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;
