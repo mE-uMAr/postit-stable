@@ -1,5 +1,3 @@
-# Build output / caches that should never be committed
-.next/
 out/
 build/
 dist/
