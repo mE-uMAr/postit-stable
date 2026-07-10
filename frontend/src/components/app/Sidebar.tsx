@@ -15,7 +15,8 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { key: "compose", label: "Compose", icon: "compose", href: "/app/compose" },
+  { key: "generate", label: "AI Generate", icon: "sparkle", href: "/app/generate" },
+  { key: "compose", label: "Compose Post", icon: "compose", href: "/app/compose" },
   { key: "calendar", label: "Calendar", icon: "calendar", href: "/app/calendar" },
   { key: "posts", label: "Posts", icon: "posts", href: "/app/posts" },
   { key: "connections", label: "Connections", icon: "connections", href: "/app/connections" },
@@ -48,21 +49,11 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         </button>
       </div>
       <nav className="sb-nav">
-        <Link
-          href="/app/compose"
-          className={"sb-item sb-compose" + (isActive("/app/compose") ? " active" : "")}
-          title="Compose"
-        >
-          <span className="sb-ico">
-            <Icon name="compose" size={21} />
-          </span>
-          <span className="sb-label">Compose</span>
-        </Link>
-        {NAV.slice(1).map((n) => (
+        {NAV.map((n, i) => (
           <Link
             key={n.key}
             href={n.href}
-            className={"sb-item" + (isActive(n.href) ? " active" : "")}
+            className={"sb-item" + (i < 2 ? " sb-compose" : "") + (isActive(n.href) ? " active" : "")}
             title={n.label}
           >
             <span className="sb-ico">

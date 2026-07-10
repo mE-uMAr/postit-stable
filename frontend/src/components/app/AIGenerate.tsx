@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SiAlibabadotcom, SiAliexpress } from "react-icons/si";
 import { Icon } from "@/components/Icon";
 import { Sparkle } from "@/components/Sparkle";
 import { PlatformLogo } from "@/components/PlatformLogo";
@@ -13,23 +12,11 @@ import type {
   ApiPost,
   ApiTarget,
   PlatformKey,
-  ProductDetail,
-  ProductSourceId,
 } from "@/lib/api/types";
 import { useToast } from "./providers/ToastProvider";
 import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
-import { ProductImportModal } from "./ProductImportModal";
 
 const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
-// Cap how many product images we pull into a post to keep the upload sane.
-const MAX_IMPORT_IMAGES = 6;
-
-interface MediaItem {
-  type: "image" | "video";
-  key: string;
-  file: File; // held client-side; streamed to platforms only at publish time
-  previewUrl: string; // object URL for local preview
-}
 
 interface Variant {
   content: string;
@@ -45,10 +32,9 @@ interface Eligibility {
 
 function eligibility(
   p: ApiPlatform,
-  { hasMedia, hasVideo, charCount }: { hasMedia: boolean; hasVideo: boolean; charCount: number },
+  { charCount }: { charCount: number },
 ): Eligibility {
-  if (p.requires_video && !hasVideo) return { ok: false, reason: "Needs a video - disabled for this post." };
-  if (p.requires_media && !hasMedia) return { ok: false, reason: `${p.name} requires an image or video.` };
+  // AI Generate only shows text-capable platforms — no media/video checks
   if (p.char_limit && charCount > p.char_limit) return { ok: true, warn: `Over ${p.char_limit} characters - Postit will trim.` };
   return { ok: true };
 }
@@ -91,11 +77,6 @@ function NativePreviewCard({ platform, author, handle, variant, idx, onEdit, onR
       >
         {variant.content}
       </div>
-      {(platform.requires_media || platform.requires_video) && (
-        <div className="npc-media placeholder" style={{ borderRadius: 0 }}>
-          {platform.requires_video ? "video frame" : "image"}
-        </div>
-      )}
       <div className="npc-actions">
         <span className="a"><Icon name="heart" size={16} /> 248</span>
         <span className="a"><Icon name="comment" size={16} /> 19</span>
@@ -116,7 +97,7 @@ function NativePreviewCard({ platform, author, handle, variant, idx, onEdit, onR
   );
 }
 
-export function Compose() {
+export function AIGenerate() {
   const pushToast = useToast();
   const platformsApi = useApi<ApiPlatform[]>("platforms");
   const connectionsApi = useApi<ApiConnection[]>("connections");
@@ -128,12 +109,14 @@ export function Compose() {
     return m;
   }, [connectionsApi.data]);
 
+  // Only text-capable platforms (no media or video requirement)
+  const textPlatforms = useMemo(
+    () => platforms.filter((p) => !p.requires_media && !p.requires_video),
+    [platforms],
+  );
+
   const [text, setText] = useState("");
   const [tone, setTone] = useState("Match my brand");
-  const [media, setMedia] = useState<MediaItem[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // No platform is selectable until the user has actually connected its account.
-  // Starts empty and is seeded once from real connections below.
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const seededRef = useRef(false);
   const [postId, setPostId] = useState<string | null>(null);
@@ -141,10 +124,7 @@ export function Compose() {
   const [generating, setGenerating] = useState(false);
   const [shimmerKey, setShimmerKey] = useState<string | null>(null);
   const [modal, setModal] = useState<ConfirmMode | null>(null);
-  const [importSource, setImportSource] = useState<ProductSourceId | null>(null);
 
-  const hasMedia = media.length > 0;
-  const hasVideo = media.some((m) => m.type === "video");
   const charCount = text.length;
 
   const platformById = useMemo(() => {
@@ -156,26 +136,22 @@ export function Compose() {
   const elig = (id: string): Eligibility => {
     const p = platformById.get(id);
     if (!p) return { ok: false };
-    // A platform is only postable once its account is connected via OAuth.
     const conn = connByPlatform.get(id);
     if (!conn || conn.status !== "connected")
       return { ok: false, reason: `Connect your ${p.name} account in Connections first.` };
-    return eligibility(p, { hasMedia, hasVideo, charCount });
+    return eligibility(p, { charCount });
   };
 
-  // Seed the default selection from the platforms the user actually has connected
-  // (text-capable ones, since a fresh post has no media yet). Runs once after both
-  // platforms and connections have loaded; fresh users start with nothing selected.
+  // Seed default selection from connected text-capable platforms
   useEffect(() => {
     if (seededRef.current || !platformsApi.data || !connectionsApi.data) return;
     seededRef.current = true;
-    const defaults = platforms.filter((p) => {
+    const defaults = textPlatforms.filter((p) => {
       const c = connByPlatform.get(p.id);
-      if (!c || c.status !== "connected") return false;
-      return !p.requires_media && !p.requires_video;
+      return c?.status === "connected";
     });
     if (defaults.length) setSelected(new Set(defaults.map((p) => p.id)));
-  }, [platformsApi.data, connectionsApi.data, platforms, connByPlatform]);
+  }, [platformsApi.data, connectionsApi.data, textPlatforms, connByPlatform]);
 
   const toggle = (id: string) => {
     if (!elig(id).ok) return;
@@ -186,80 +162,7 @@ export function Compose() {
       return n;
     });
   };
-  const selectAllEligible = () => setSelected(new Set(platforms.filter((p) => elig(p.id).ok).map((p) => p.id)));
-
-  const addFiles = (files: FileList | null) => {
-    if (!files?.length) return;
-    const items: MediaItem[] = Array.from(files).map((file) => ({
-      type: file.type.startsWith("video/") ? "video" : "image",
-      key: `${file.name}-${Date.now()}-${Math.random()}`,
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
-    setMedia((m) => [...m, ...items]);
-  };
-  const removeMedia = (key: string) =>
-    setMedia((m) => {
-      const found = m.find((x) => x.key === key);
-      if (found) URL.revokeObjectURL(found.previewUrl);
-      return m.filter((x) => x.key !== key);
-    });
-
-  // Pull a remote product asset (image/video) through our same-origin media proxy
-  // and wrap it as a MediaItem so it publishes exactly like an uploaded file.
-  const fetchRemoteMedia = async (
-    remoteUrl: string,
-    kind: "image" | "video",
-    label: string,
-  ): Promise<MediaItem | null> => {
-    try {
-      const res = await fetch(`/api/products/media?url=${encodeURIComponent(remoteUrl)}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) return null;
-      const blob = await res.blob();
-      const ct = blob.type || (kind === "video" ? "video/mp4" : "image/jpeg");
-      const ext = (ct.split("/")[1] || (kind === "video" ? "mp4" : "jpg")).split(";")[0];
-      const file = new File([blob], `${label}-${Date.now()}.${ext}`, { type: ct });
-      return {
-        type: kind,
-        key: `${label}-${Date.now()}-${Math.random()}`,
-        file,
-        previewUrl: URL.createObjectURL(file),
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  // Drop an imported product into the composer: its title + description + affiliate
-  // link become the post text, and its images/video are added as media.
-  const importProduct = async (detail: ProductDetail) => {
-    const block = [
-      detail.title.trim(),
-      detail.description.trim(),
-      detail.affiliate_link ? `🛒 ${detail.affiliate_link}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    setText((t) => (t.trim() ? `${t.trim()}\n\n${block}` : block));
-
-    const label = `${detail.source}-${detail.product_id}`;
-    const items: MediaItem[] = [];
-    for (const url of detail.images.slice(0, MAX_IMPORT_IMAGES)) {
-      const it = await fetchRemoteMedia(url, "image", label);
-      if (it) items.push(it);
-    }
-    if (detail.video_url) {
-      const v = await fetchRemoteMedia(detail.video_url, "video", `${label}-video`);
-      if (v) items.push(v);
-    }
-    if (items.length) setMedia((m) => [...m, ...items]);
-    pushToast(
-      `Imported product — ${items.length} media file${items.length === 1 ? "" : "s"} added` +
-        (detail.video_url && !items.some((i) => i.type === "video") ? " (video unavailable)" : ""),
-    );
-  };
+  const selectAllEligible = () => setSelected(new Set(textPlatforms.filter((p) => elig(p.id).ok).map((p) => p.id)));
 
   const eligibleSelected = [...selected].filter((k) => elig(k).ok);
 
@@ -270,7 +173,7 @@ export function Compose() {
     const payload = {
       body: text,
       tone,
-      media: media.map((m) => ({ type: m.type })),
+      media: [],
     };
     if (postId) {
       await api.patch(`posts/${postId}`, payload);
@@ -335,10 +238,7 @@ export function Compose() {
     setModal(null);
     if (!postId) return;
     try {
-      // Media is streamed with the publish request (not stored server-side).
-      const fd = new FormData();
-      media.forEach((m) => fd.append("files", m.file, m.file.name));
-      const res = await fetch(`/api/posts/${postId}/publish`, { method: "POST", body: fd });
+      const res = await fetch(`/api/posts/${postId}/publish`, { method: "POST" });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         pushToast(data?.error?.message || "Couldn't publish");
@@ -358,61 +258,15 @@ export function Compose() {
 
   return (
     <div className="compose-grid">
-      {/* LEFT - composer + selector */}
+      {/* LEFT - AI text composer */}
       <div className="compose-left">
-        <div className="compose-header">
-          <div className="compose-badge">
-            <Icon name="compose" size={20} /> <span>Compose Post</span>
+        <div className="aigen-header">
+          <div className="aigen-badge">
+            <Sparkle size={18} /> <span>AI Generate</span>
           </div>
-          <p className="compose-subtitle">
-            Upload images or videos and publish to all your platforms — including TikTok and YouTube.
+          <p className="aigen-subtitle">
+            Write your idea once — AI rewrites it natively for every platform.
           </p>
-        </div>
-
-        {/* Media upload - prominent area */}
-        <div className="media-upload-card">
-          <div className="media-upload-label">
-            <Icon name="upload" size={16} />
-            <span>Media</span>
-            {media.length > 0 && <span className="media-count">{media.length} file{media.length === 1 ? "" : "s"}</span>}
-          </div>
-          {media.length > 0 && (
-            <div className="media-thumbs">
-              {media.map((m) => (
-                <div key={m.key} className="media-thumb">
-                  {m.type === "video" ? (
-                    <video src={m.previewUrl} muted />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.previewUrl} alt="" />
-                  )}
-                  <button className="rm" onClick={() => removeMedia(m.key)}>
-                    <Icon name="x" size={12} />
-                  </button>
-                  <span className="media-type-tag">{m.type === "video" ? "Video" : "Image"}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            hidden
-            onChange={(e) => {
-              addFiles(e.target.files);
-              e.target.value = "";
-            }}
-          />
-          <div className="media-zone media-zone-lg" onClick={() => fileInputRef.current?.click()}>
-            <div className="media-zone-icons">
-              <Icon name="image" size={22} />
-              <Icon name="video" size={22} />
-            </div>
-            <span><strong>Click to upload</strong> images or videos</span>
-            <span className="media-zone-hint">Supports JPG, PNG, GIF, MP4, MOV</span>
-          </div>
         </div>
 
         <div className="composer-card">
@@ -429,7 +283,7 @@ export function Compose() {
             className="compose-textarea"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Write your post caption or text…"
+            placeholder="What do you want to say?"
           />
         </div>
 
@@ -460,7 +314,7 @@ export function Compose() {
             <button className="all" onClick={selectAllEligible}>Select all eligible</button>
           </div>
           <div className="psel-grid">
-            {platforms.map((p) => {
+            {textPlatforms.map((p) => {
               const e = elig(p.id);
               const sel = selected.has(p.id);
               const warn = sel && e.warn;
@@ -545,33 +399,12 @@ export function Compose() {
             <div>
               <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>No previews yet</div>
               <div>
-                Pick your platforms, then hit <strong>Generate</strong> to watch one idea become{" "}
-                {postCount || "several"} native posts.
+                Write your idea, pick platforms, then hit <strong>Generate</strong> to create{" "}
+                {postCount || "several"} native posts with AI.
               </div>
             </div>
           </div>
         )}
-      </div>
-
-      {/* PRODUCT IMPORT - bottom-right floating buttons */}
-      <div className="product-fab-group">
-        <span className="product-fab-label">Import products</span>
-        <button
-          className="product-fab"
-          style={{ background: "#FF6A00" }}
-          onClick={() => setImportSource("alibaba")}
-          title="Fetch products from Alibaba"
-        >
-          <SiAlibabadotcom /> Alibaba
-        </button>
-        <button
-          className="product-fab"
-          style={{ background: "#E62E04" }}
-          onClick={() => setImportSource("aliexpress")}
-          title="Fetch products from AliExpress"
-        >
-          <SiAliexpress /> AliExpress
-        </button>
       </div>
 
       {/* ACTION BAR */}
@@ -592,14 +425,6 @@ export function Compose() {
           platforms={shownKeys as PlatformKey[]}
           onClose={() => setModal(null)}
           onConfirm={confirmAction}
-        />
-      )}
-
-      {importSource && (
-        <ProductImportModal
-          source={importSource}
-          onClose={() => setImportSource(null)}
-          onImport={importProduct}
         />
       )}
     </div>

@@ -44,6 +44,8 @@ export const ICONS = {
   card: "M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z M3 10h18",
   upload: "M12 16V4 M7 9l5-5 5 5 M5 20h14",
   logout: "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9",
+  sparkle: "M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z",
+  video: "M4 5a2 2 0 012-2h8a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z M16 8l4-2v12l-4-2",
 } as const;
 
 export type IconName = keyof typeof ICONS;
