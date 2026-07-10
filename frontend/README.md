@@ -1,6 +1,6 @@
 # Postit
 
-> Write it once. Postit everywhere. — an AI social cross-posting product UI.
+> Write it once. Postit everywhere, an AI social cross-posting product UI.
 
 This is a [Next.js](https://nextjs.org) (App Router + TypeScript) application, converted
 from a static HTML/CSS + in-browser-Babel React prototype into a fully structured project.
