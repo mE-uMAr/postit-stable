@@ -15,7 +15,7 @@ import type {
   PlatformKey,
   ProductDetail,
   ProductSourceId,
-} from "@/lib/api/types";
+import { PF } from "@/lib/platforms";
 import { useToast } from "./providers/ToastProvider";
 import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
 import { ProductImportModal } from "./ProductImportModal";
@@ -360,13 +360,24 @@ export function Compose() {
     <div className="compose-grid">
       {/* LEFT - composer + selector */}
       <div className="compose-left">
-        <div className="compose-header">
-          <div className="compose-badge">
-            <Icon name="compose" size={20} /> <span>Compose Post</span>
+        <div className="compose-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div className="compose-badge">
+              <Icon name="compose" size={20} /> <span>Compose Post</span>
+            </div>
+            <p className="compose-subtitle">
+              Upload images or videos and publish to all your platforms — including TikTok and YouTube.
+            </p>
           </div>
-          <p className="compose-subtitle">
-            Upload images or videos and publish to all your platforms — including TikTok and YouTube.
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div className="action-summary" style={{ fontSize: "13px", color: "var(--ink-soft)", marginRight: "8px" }}>
+              Posting to <strong>{postCount}</strong>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={saveDraft}>Save draft</button>
+            <button className="btn btn-spark btn-sm" onClick={() => setModal("post")} disabled={!canPublish}>
+              <Icon name="send" size={16} /> Post now
+            </button>
+          </div>
         </div>
 
         {/* Media upload - prominent area */}
@@ -474,7 +485,7 @@ export function Compose() {
                   <span className={"pf pf-" + p.id + " pchip-logo"}>
                     <PlatformLogo platform={p.id as PlatformKey} />
                   </span>
-                  {p.name}
+                  {p.name || PF[p.id as PlatformKey]?.name || p.id}
                   {!e.ok && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--ink-faint)" }} />}
                   {warn && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--spark-deep)" }} />}
                 </button>
@@ -571,18 +582,6 @@ export function Compose() {
           title="Fetch products from AliExpress"
         >
           <SiAliexpress /> AliExpress
-        </button>
-      </div>
-
-      {/* ACTION BAR */}
-      <div className="action-bar">
-        <div className="action-summary">
-          Posting to <strong>{postCount}</strong> platform{postCount === 1 ? "" : "s"}
-        </div>
-        <span className="spacer" />
-        <button className="btn btn-ghost" onClick={saveDraft}>Save draft</button>
-        <button className="btn btn-spark" onClick={() => setModal("post")} disabled={!canPublish}>
-          <Icon name="send" size={17} /> Post now
         </button>
       </div>
 

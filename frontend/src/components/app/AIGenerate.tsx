@@ -12,7 +12,7 @@ import type {
   ApiPost,
   ApiTarget,
   PlatformKey,
-} from "@/lib/api/types";
+import { PF } from "@/lib/platforms";
 import { useToast } from "./providers/ToastProvider";
 import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
 
@@ -260,13 +260,24 @@ export function AIGenerate() {
     <div className="compose-grid">
       {/* LEFT - AI text composer */}
       <div className="compose-left">
-        <div className="aigen-header">
-          <div className="aigen-badge">
-            <Sparkle size={18} /> <span>AI Generate</span>
+        <div className="aigen-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div className="aigen-badge">
+              <Sparkle size={18} /> <span>AI Generate</span>
+            </div>
+            <p className="aigen-subtitle">
+              Write your idea once — AI rewrites it natively for every platform.
+            </p>
           </div>
-          <p className="aigen-subtitle">
-            Write your idea once — AI rewrites it natively for every platform.
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div className="action-summary" style={{ fontSize: "13px", color: "var(--ink-soft)", marginRight: "8px" }}>
+              Posting to <strong>{postCount}</strong>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={saveDraft}>Save draft</button>
+            <button className="btn btn-spark btn-sm" onClick={() => setModal("post")} disabled={!canPublish}>
+              <Icon name="send" size={16} /> Post now
+            </button>
+          </div>
         </div>
 
         <div className="composer-card">
@@ -328,7 +339,7 @@ export function AIGenerate() {
                   <span className={"pf pf-" + p.id + " pchip-logo"}>
                     <PlatformLogo platform={p.id as PlatformKey} />
                   </span>
-                  {p.name}
+                  {p.name || PF[p.id as PlatformKey]?.name || p.id}
                   {!e.ok && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--ink-faint)" }} />}
                   {warn && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--spark-deep)" }} />}
                 </button>
@@ -405,18 +416,6 @@ export function AIGenerate() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* ACTION BAR */}
-      <div className="action-bar">
-        <div className="action-summary">
-          Posting to <strong>{postCount}</strong> platform{postCount === 1 ? "" : "s"}
-        </div>
-        <span className="spacer" />
-        <button className="btn btn-ghost" onClick={saveDraft}>Save draft</button>
-        <button className="btn btn-spark" onClick={() => setModal("post")} disabled={!canPublish}>
-          <Icon name="send" size={17} /> Post now
-        </button>
       </div>
 
       {modal && (
