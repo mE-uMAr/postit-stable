@@ -47,6 +47,7 @@ async def register(
         is_verified=False,
     )
     await workspace_service.create_workspace(db, user, workspace_name or f"{full_name}'s Workspace")
+    await db.refresh(user)
     return user
 
 

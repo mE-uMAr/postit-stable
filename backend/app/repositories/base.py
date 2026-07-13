@@ -57,6 +57,7 @@ class BaseRepository(Generic[ModelT]):
         obj = self.model(**kwargs)
         self.db.add(obj)
         await self.db.flush()
+        await self.db.refresh(obj)
         return obj
 
     async def delete(self, obj: ModelT) -> None:
