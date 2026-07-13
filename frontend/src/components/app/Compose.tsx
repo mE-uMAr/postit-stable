@@ -16,8 +16,8 @@ import type {
   ProductDetail,
   ProductSourceId,
 } from "@/lib/api/types";
+import { PF } from "@/lib/platforms";
 import { useToast } from "./providers/ToastProvider";
-import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
 import { ProductImportModal } from "./ProductImportModal";
 
 const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
@@ -140,7 +140,6 @@ export function Compose() {
   const [variants, setVariants] = useState<Variants | null>(null);
   const [generating, setGenerating] = useState(false);
   const [shimmerKey, setShimmerKey] = useState<string | null>(null);
-  const [modal, setModal] = useState<ConfirmMode | null>(null);
   const [importSource, setImportSource] = useState<ProductSourceId | null>(null);
 
   const hasMedia = media.length > 0;
@@ -292,6 +291,7 @@ export function Compose() {
         v[t.platform_id] = { content: t.content, edited: t.edited };
       });
       setVariants(v);
+      pushToast("Draft saved — find it in Posts");
     } catch (e) {
       pushToast(errorMessage(e));
     } finally {
@@ -322,51 +322,27 @@ export function Compose() {
     }
   };
 
-  const saveDraft = async () => {
-    try {
-      await ensurePost();
-      pushToast("Draft saved");
-    } catch (e) {
-      pushToast(errorMessage(e));
-    }
-  };
-
-  const confirmAction = async () => {
-    setModal(null);
-    if (!postId) return;
-    try {
-      // Media is streamed with the publish request (not stored server-side).
-      const fd = new FormData();
-      media.forEach((m) => fd.append("files", m.file, m.file.name));
-      const res = await fetch(`/api/posts/${postId}/publish`, { method: "POST", body: fd });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        pushToast(data?.error?.message || "Couldn't publish");
-        return;
-      }
-      pushToast(`Posted to ${postCount} platforms`);
-    } catch (e) {
-      pushToast(errorMessage(e));
-    }
-  };
-
   const shownKeys = variants ? Object.keys(variants).filter((k) => selected.has(k) && elig(k).ok) : [];
   const xLimit = platformById.get("x")?.char_limit ?? 280;
   const overX = selected.has("x") && charCount > xLimit;
   const postCount = eligibleSelected.length;
-  const canPublish = Boolean(variants && shownKeys.length > 0);
 
   return (
     <div className="compose-grid">
       {/* LEFT - composer + selector */}
       <div className="compose-left">
-        <div className="compose-header">
-          <div className="compose-badge">
-            <Icon name="compose" size={20} /> <span>Compose Post</span>
+        <div className="compose-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div className="compose-badge">
+              <Icon name="compose" size={20} /> <span>Compose Post</span>
+            </div>
+            <p className="compose-subtitle">
+              Upload images or videos and publish to all your platforms — including TikTok and YouTube.
+            </p>
           </div>
-          <p className="compose-subtitle">
-            Upload images or videos and publish to all your platforms — including TikTok and YouTube.
-          </p>
+          <div className="action-summary" style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
+            Posting to <strong>{postCount}</strong>
+          </div>
         </div>
 
         {/* Media upload - prominent area */}
@@ -474,7 +450,7 @@ export function Compose() {
                   <span className={"pf pf-" + p.id + " pchip-logo"}>
                     <PlatformLogo platform={p.id as PlatformKey} />
                   </span>
-                  {p.name}
+                  {p.name || PF[p.id as PlatformKey]?.name || p.id}
                   {!e.ok && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--ink-faint)" }} />}
                   {warn && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--spark-deep)" }} />}
                 </button>
@@ -574,26 +550,7 @@ export function Compose() {
         </button>
       </div>
 
-      {/* ACTION BAR */}
-      <div className="action-bar">
-        <div className="action-summary">
-          Posting to <strong>{postCount}</strong> platform{postCount === 1 ? "" : "s"}
-        </div>
-        <span className="spacer" />
-        <button className="btn btn-ghost" onClick={saveDraft}>Save draft</button>
-        <button className="btn btn-spark" onClick={() => setModal("post")} disabled={!canPublish}>
-          <Icon name="send" size={17} /> Post now
-        </button>
-      </div>
 
-      {modal && (
-        <ConfirmModal
-          mode={modal}
-          platforms={shownKeys as PlatformKey[]}
-          onClose={() => setModal(null)}
-          onConfirm={confirmAction}
-        />
-      )}
 
       {importSource && (
         <ProductImportModal

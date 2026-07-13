@@ -13,8 +13,8 @@ import type {
   ApiTarget,
   PlatformKey,
 } from "@/lib/api/types";
+import { PF } from "@/lib/platforms";
 import { useToast } from "./providers/ToastProvider";
-import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
 
 const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
 
@@ -123,7 +123,6 @@ export function AIGenerate() {
   const [variants, setVariants] = useState<Variants | null>(null);
   const [generating, setGenerating] = useState(false);
   const [shimmerKey, setShimmerKey] = useState<string | null>(null);
-  const [modal, setModal] = useState<ConfirmMode | null>(null);
 
   const charCount = text.length;
 
@@ -195,6 +194,7 @@ export function AIGenerate() {
         v[t.platform_id] = { content: t.content, edited: t.edited };
       });
       setVariants(v);
+      pushToast("Draft saved — find it in Posts");
     } catch (e) {
       pushToast(errorMessage(e));
     } finally {
@@ -225,48 +225,27 @@ export function AIGenerate() {
     }
   };
 
-  const saveDraft = async () => {
-    try {
-      await ensurePost();
-      pushToast("Draft saved");
-    } catch (e) {
-      pushToast(errorMessage(e));
-    }
-  };
-
-  const confirmAction = async () => {
-    setModal(null);
-    if (!postId) return;
-    try {
-      const res = await fetch(`/api/posts/${postId}/publish`, { method: "POST" });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        pushToast(data?.error?.message || "Couldn't publish");
-        return;
-      }
-      pushToast(`Posted to ${postCount} platforms`);
-    } catch (e) {
-      pushToast(errorMessage(e));
-    }
-  };
-
   const shownKeys = variants ? Object.keys(variants).filter((k) => selected.has(k) && elig(k).ok) : [];
   const xLimit = platformById.get("x")?.char_limit ?? 280;
   const overX = selected.has("x") && charCount > xLimit;
   const postCount = eligibleSelected.length;
-  const canPublish = Boolean(variants && shownKeys.length > 0);
 
   return (
     <div className="compose-grid">
       {/* LEFT - AI text composer */}
       <div className="compose-left">
-        <div className="aigen-header">
-          <div className="aigen-badge">
-            <Sparkle size={18} /> <span>AI Generate</span>
+        <div className="aigen-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div className="aigen-badge">
+              <Sparkle size={18} /> <span>AI Generate</span>
+            </div>
+            <p className="aigen-subtitle">
+              Write your idea once — AI rewrites it natively for every platform.
+            </p>
           </div>
-          <p className="aigen-subtitle">
-            Write your idea once — AI rewrites it natively for every platform.
-          </p>
+          <div className="action-summary" style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
+            Posting to <strong>{postCount}</strong>
+          </div>
         </div>
 
         <div className="composer-card">
@@ -328,7 +307,7 @@ export function AIGenerate() {
                   <span className={"pf pf-" + p.id + " pchip-logo"}>
                     <PlatformLogo platform={p.id as PlatformKey} />
                   </span>
-                  {p.name}
+                  {p.name || PF[p.id as PlatformKey]?.name || p.id}
                   {!e.ok && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--ink-faint)" }} />}
                   {warn && <Icon name="alert" size={14} style={{ marginLeft: 2, color: "var(--spark-deep)" }} />}
                 </button>
@@ -407,26 +386,6 @@ export function AIGenerate() {
         )}
       </div>
 
-      {/* ACTION BAR */}
-      <div className="action-bar">
-        <div className="action-summary">
-          Posting to <strong>{postCount}</strong> platform{postCount === 1 ? "" : "s"}
-        </div>
-        <span className="spacer" />
-        <button className="btn btn-ghost" onClick={saveDraft}>Save draft</button>
-        <button className="btn btn-spark" onClick={() => setModal("post")} disabled={!canPublish}>
-          <Icon name="send" size={17} /> Post now
-        </button>
-      </div>
-
-      {modal && (
-        <ConfirmModal
-          mode={modal}
-          platforms={shownKeys as PlatformKey[]}
-          onClose={() => setModal(null)}
-          onConfirm={confirmAction}
-        />
-      )}
     </div>
   );
 }
