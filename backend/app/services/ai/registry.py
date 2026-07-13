@@ -7,6 +7,7 @@ from app.services.ai.base import LLMProvider
 from app.services.ai.providers.anthropic import AnthropicProvider
 from app.services.ai.providers.gemini import GeminiProvider
 from app.services.ai.providers.groq import GroqProvider
+from app.services.ai.providers.grok import GrokProvider
 from app.services.ai.providers.mock import MockProvider
 from app.services.ai.providers.openai import OpenAIProvider
 
@@ -15,6 +16,8 @@ _REGISTRY: dict[str, type[LLMProvider]] = {
     "anthropic": AnthropicProvider,
     "openai": OpenAIProvider,
     "groq": GroqProvider,
+    "grok": GrokProvider,
+    "gork": GrokProvider,
     "gemini": GeminiProvider,
 }
 

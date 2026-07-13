@@ -109,9 +109,9 @@ export function AIGenerate() {
     return m;
   }, [connectionsApi.data]);
 
-  // Only text-capable platforms (no media or video requirement)
+  // All platforms except YouTube and TikTok
   const textPlatforms = useMemo(
-    () => platforms.filter((p) => !p.requires_media && !p.requires_video),
+    () => platforms.filter((p) => p.id !== "youtube" && p.id !== "tiktok"),
     [platforms],
   );
 
