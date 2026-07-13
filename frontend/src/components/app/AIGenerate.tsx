@@ -12,9 +12,9 @@ import type {
   ApiPost,
   ApiTarget,
   PlatformKey,
+} from "@/lib/api/types";
 import { PF } from "@/lib/platforms";
 import { useToast } from "./providers/ToastProvider";
-import { ConfirmModal, type ConfirmMode } from "./ConfirmModal";
 
 const TONES = ["Professional", "Casual", "Bold", "Match my brand"];
 
@@ -123,7 +123,6 @@ export function AIGenerate() {
   const [variants, setVariants] = useState<Variants | null>(null);
   const [generating, setGenerating] = useState(false);
   const [shimmerKey, setShimmerKey] = useState<string | null>(null);
-  const [modal, setModal] = useState<ConfirmMode | null>(null);
 
   const charCount = text.length;
 
@@ -195,6 +194,7 @@ export function AIGenerate() {
         v[t.platform_id] = { content: t.content, edited: t.edited };
       });
       setVariants(v);
+      pushToast("Draft saved — find it in Posts");
     } catch (e) {
       pushToast(errorMessage(e));
     } finally {
@@ -225,36 +225,10 @@ export function AIGenerate() {
     }
   };
 
-  const saveDraft = async () => {
-    try {
-      await ensurePost();
-      pushToast("Draft saved");
-    } catch (e) {
-      pushToast(errorMessage(e));
-    }
-  };
-
-  const confirmAction = async () => {
-    setModal(null);
-    if (!postId) return;
-    try {
-      const res = await fetch(`/api/posts/${postId}/publish`, { method: "POST" });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        pushToast(data?.error?.message || "Couldn't publish");
-        return;
-      }
-      pushToast(`Posted to ${postCount} platforms`);
-    } catch (e) {
-      pushToast(errorMessage(e));
-    }
-  };
-
   const shownKeys = variants ? Object.keys(variants).filter((k) => selected.has(k) && elig(k).ok) : [];
   const xLimit = platformById.get("x")?.char_limit ?? 280;
   const overX = selected.has("x") && charCount > xLimit;
   const postCount = eligibleSelected.length;
-  const canPublish = Boolean(variants && shownKeys.length > 0);
 
   return (
     <div className="compose-grid">
@@ -269,14 +243,8 @@ export function AIGenerate() {
               Write your idea once — AI rewrites it natively for every platform.
             </p>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div className="action-summary" style={{ fontSize: "13px", color: "var(--ink-soft)", marginRight: "8px" }}>
-              Posting to <strong>{postCount}</strong>
-            </div>
-            <button className="btn btn-ghost btn-sm" onClick={saveDraft}>Save draft</button>
-            <button className="btn btn-spark btn-sm" onClick={() => setModal("post")} disabled={!canPublish}>
-              <Icon name="send" size={16} /> Post now
-            </button>
+          <div className="action-summary" style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
+            Posting to <strong>{postCount}</strong>
           </div>
         </div>
 
@@ -418,14 +386,6 @@ export function AIGenerate() {
         )}
       </div>
 
-      {modal && (
-        <ConfirmModal
-          mode={modal}
-          platforms={shownKeys as PlatformKey[]}
-          onClose={() => setModal(null)}
-          onConfirm={confirmAction}
-        />
-      )}
     </div>
   );
 }
