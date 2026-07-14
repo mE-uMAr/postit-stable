@@ -121,8 +121,12 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
 
 
 @router.get("/me", response_model=UserRead)
-async def me(user: User = Depends(get_current_active_user)):
-    return user
+async def me(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_active_user),
+):
+    await db.refresh(user)
+    return UserRead.model_validate(user)
 
 
 @router.post("/change-password", response_model=Message)
