@@ -76,6 +76,21 @@ if not settings.is_sqlite:
     # call ping(False), which the aiomysql adapter accepts.
     engine.sync_engine.dialect._send_false_to_ping = True
 
+    try:
+        import aiomysql.connection
+        _original_del = aiomysql.connection.Connection.__del__
+
+        def _safe_del(self) -> None:
+            try:
+                _original_del(self)
+            except RuntimeError as exc:
+                if "Event loop is closed" not in str(exc):
+                    raise
+
+        aiomysql.connection.Connection.__del__ = _safe_del
+    except ImportError:
+        pass
+
 SessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
