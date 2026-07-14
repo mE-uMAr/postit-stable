@@ -74,6 +74,14 @@ async def lifespan(app: FastAPI):
         except (asyncio.TimeoutError, asyncio.CancelledError):
             scheduler_task.cancel()
 
+    # Dispose the engine so all pooled aiomysql connections are closed while the
+    # event loop is still running. Without this, Python's GC calls
+    # Connection.__del__ after the loop closes → "Event loop is closed".
+    from app.core.database import engine  # noqa: E402
+
+    await engine.dispose()
+
+
 
 def create_app() -> FastAPI:
     # Don't expose interactive docs / OpenAPI schema in production.

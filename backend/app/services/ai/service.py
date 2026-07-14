@@ -1,8 +1,9 @@
 """High-level AI surface used by the rest of the app.
 
-Provider-agnostic: builds platform-aware prompts, calls the configured provider,
-and *always* degrades gracefully to the deterministic rewriter so generation
-never hard-fails (offline, missing key, provider outage…).
+Provider-agnostic: builds platform-aware prompts and calls the configured
+provider. When no provider is configured (mock), the deterministic rewriter is
+used. When a real provider IS configured but fails, the error propagates so the
+caller receives a clear failure instead of silent template output.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from app.core.logging import logger
 from app.models.analytics import AnalyticsDaily
 from app.models.brand_voice import BrandVoice
 from app.models.platform import Platform
+from app.services.ai.base import ProviderError
 from app.services.ai.registry import get_provider
 from app.services.rewrite import rewrite_for
 
@@ -95,11 +97,16 @@ class AIService:
             if platform.char_limit and len(text) > platform.char_limit:
                 text = text[: platform.char_limit].rstrip()
             return text
-        except Exception:  # noqa: BLE001 - any provider failure → deterministic fallback
-            logger.warning(
-                "AI provider '%s' failed; using deterministic rewrite", provider.name, exc_info=True
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "AI provider '%s' failed for platform '%s': %s",
+                provider.name, platform.id, exc, exc_info=True,
             )
-            return rewrite_for(platform.id, body, tone)
+            raise ProviderError(
+                f"AI generation failed ({provider.name}): {exc}. "
+                "Check your AI_API_KEY and AI_PROVIDER settings."
+            ) from exc
+
 
     async def suggest_best_times(
         self, db: AsyncSession, workspace_id: uuid.UUID, *, count: int = 3
