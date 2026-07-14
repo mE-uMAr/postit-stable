@@ -283,7 +283,7 @@ export function AIGenerate() {
           {generating ? (
             <><span className="spin" /> Generating…</>
           ) : (
-            <><Sparkle size={17} /> Generate platform versions</>
+            <><Sparkle size={17} /> Generate through AI</>
           )}
         </button>
 

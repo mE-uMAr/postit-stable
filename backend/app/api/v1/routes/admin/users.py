@@ -37,7 +37,9 @@ async def list_users(
 
 @router.get("/{user_id}", response_model=AdminUserRead)
 async def get_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    return await admin_service.get_user(db, user_id)
+    user = await admin_service.get_user(db, user_id)
+    await db.refresh(user)
+    return AdminUserRead.model_validate(user)
 
 
 @router.patch("/{user_id}", response_model=AdminUserRead)
@@ -54,7 +56,8 @@ async def update_user(
     await record_audit(
         db, action="admin.user.updated", actor_id=admin.id, target_type="user", target_id=str(user_id)
     )
-    return user
+    await db.refresh(user)
+    return AdminUserRead.model_validate(user)
 
 
 @router.delete("/{user_id}", response_model=Message)
