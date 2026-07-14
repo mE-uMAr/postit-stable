@@ -54,6 +54,7 @@ async def verify_otp(payload: OtpVerifyRequest, request: Request, db: AsyncSessi
     user = await auth_service.verify_signup(db, email=payload.email, code=payload.code)
     tokens = await auth_service.issue_tokens(db, user, user_agent=meta["user_agent"], ip=meta["ip"])
     await record_audit(db, action="user.verified", actor_id=user.id, **meta)
+    await db.refresh(user)
     return AuthResponse(user=UserRead.model_validate(user), tokens=tokens)
 
 
@@ -69,6 +70,7 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     user = await auth_service.authenticate(db, email=payload.email, password=payload.password)
     tokens = await auth_service.issue_tokens(db, user, user_agent=meta["user_agent"], ip=meta["ip"])
     await record_audit(db, action="user.login", actor_id=user.id, **meta)
+    await db.refresh(user)
     return AuthResponse(user=UserRead.model_validate(user), tokens=tokens)
 
 
