@@ -1,11 +1,9 @@
 """Publishing pipeline shared by immediate publish and the scheduled worker.
-
 Each target is published to the live platform API using the workspace's stored
 (encrypted) OAuth token. Targets transition to ``published`` with the real
 external post id, the post status is rolled up, usage is recorded, and the
 author is notified.
 """
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
