@@ -20,7 +20,7 @@ from app.repositories.post import PostRepository, PostTargetRepository
 from app.schemas.post import PostCreate, PostUpdate
 from app.services import publish as publish_service
 from app.services import usage as usage_service
-from app.services.ai import ai_service
+from app.services.ai import ProviderError, ai_service
 from app.services.rewrite import title_for
 
 
@@ -117,9 +117,12 @@ async def generate(db: AsyncSession, post: Post, platform_ids: list[str]) -> Pos
             await targets_repo.delete(target)
 
     for platform in eligible:
-        content = await ai_service.generate_variant(
-            platform=platform, body=post.body, tone=post.tone, brand_voice=brand_voice
-        )
+        try:
+            content = await ai_service.generate_variant(
+                platform=platform, body=post.body, tone=post.tone, brand_voice=brand_voice
+            )
+        except ProviderError as exc:
+            raise ValidationError_(str(exc), code="ai_generation_failed") from exc
         connection = await conns.get_for_platform(post.workspace_id, platform.id)
         connection_id = (
             connection.id if connection and connection.status == ConnectionStatus.connected else None
@@ -165,9 +168,12 @@ async def regenerate_target(db: AsyncSession, post: Post, platform_id: str) -> P
     if platform is None:
         raise NotFoundError("Unknown platform.", code="platform_not_found")
     brand_voice = await ai_service.get_brand_voice(db, post.workspace_id)
-    target.content = await ai_service.generate_variant(
-        platform=platform, body=post.body, tone=post.tone, brand_voice=brand_voice
-    )
+    try:
+        target.content = await ai_service.generate_variant(
+            platform=platform, body=post.body, tone=post.tone, brand_voice=brand_voice
+        )
+    except ProviderError as exc:
+        raise ValidationError_(str(exc), code="ai_generation_failed") from exc
     target.edited = False
     await db.flush()
     return target
